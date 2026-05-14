@@ -845,13 +845,27 @@ export const PostEditor: React.FC<PostEditorProps> = ({ post, config, onBack }) 
 
     setAddingProduct(true);
     try {
+      // Pre-flight: confirm the ASIN actually resolves on amazon.com BEFORE we burn a SerpAPI call
+      // or insert a product whose affiliate link would publish as a 404.
+      const reach = await verifyAsin({ data: { asin } });
+      if (!reach.ok) {
+        const msg =
+          reach.reason === 'not_found' ? `ASIN ${asin} returns 404 on amazon.com — not a real product.` :
+          reach.reason === 'invalid_format' ? `ASIN ${asin} is not a valid Amazon ID format.` :
+          reach.reason === 'timeout' ? 'Amazon reachability check timed out. Try again.' :
+          reach.reason === 'redirected_off_product' ? `ASIN ${asin} redirected away from a product page.` :
+          `ASIN ${asin} could not be verified on Amazon (${reach.reason}).`;
+        toast(msg, { duration: 6000 });
+        return;
+      }
+
       const product = await fetchProductByASIN(asin, config.serpApiKey);
       if (product?.asin) {
         setProductMap((prev) => ({ ...prev, [product.id]: product }));
-        toast(`Added: ${product.title.substring(0, 40)}…`);
+        toast(`Added & verified: ${product.title.substring(0, 40)}…`);
         setManualAsin('');
       } else {
-        toast('Product not found on Amazon.');
+        toast('ASIN reachable on Amazon, but SerpAPI returned no metadata.');
       }
     } catch (e: any) {
       const m = e?.message || 'Unknown error';
