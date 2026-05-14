@@ -116,7 +116,7 @@ const DEMO_PRODUCT: ProductDetails = {
   title: 'Sony WH-1000XM5 Wireless Industry-Leading Noise-Canceling Headphones (Black)',
   price: '$328.00',
   imageUrl:
-    'https://m.media-amazon.com/images/I/61+CLnymfOL._AC_SL1500_.jpg',
+    'https://m.media-amazon.com/images/I/61vJtKbAssL._AC_SL1500_.jpg',
   rating: 4.7,
   reviewCount: 12480,
   brand: 'Sony',
