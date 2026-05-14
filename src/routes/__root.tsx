@@ -1,9 +1,11 @@
 import type { ReactNode } from 'react';
 import {
+  Link,
   createRootRouteWithContext,
   HeadContent,
   Outlet,
   Scripts,
+  useRouter,
 } from '@tanstack/react-router';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ErrorBoundary } from 'react-error-boundary';
@@ -42,6 +44,7 @@ export const Route = createRootRouteWithContext<RouterContext>()({
     ],
   }),
   component: RootComponent,
+  errorComponent: RootErrorComponent,
   notFoundComponent: () => (
     <RootDocument>
       <div className="min-h-screen flex items-center justify-center bg-dark-950 text-white">
@@ -53,6 +56,40 @@ export const Route = createRootRouteWithContext<RouterContext>()({
     </RootDocument>
   ),
 });
+
+function RootErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
+  const router = useRouter();
+
+  console.error(error);
+
+  return (
+    <RootDocument>
+      <div className="min-h-screen bg-dark-950 flex items-center justify-center p-8">
+        <div className="bg-dark-900 border border-red-500/30 rounded-3xl p-8 max-w-lg text-center">
+          <h1 className="text-2xl font-black text-white mb-4">Application Error</h1>
+          <p className="text-gray-400 mb-6">{error.message}</p>
+          <div className="flex flex-wrap justify-center gap-3">
+            <button
+              onClick={() => {
+                router.invalidate();
+                reset();
+              }}
+              className="bg-white text-dark-950 px-6 py-3 rounded-xl font-bold hover:bg-brand-500 hover:text-white transition-all"
+            >
+              Try again
+            </button>
+            <Link
+              to="/"
+              className="border border-dark-700 text-white px-6 py-3 rounded-xl font-bold hover:bg-dark-800 transition-all"
+            >
+              Go home
+            </Link>
+          </div>
+        </div>
+      </div>
+    </RootDocument>
+  );
+}
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
