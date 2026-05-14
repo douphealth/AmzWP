@@ -461,6 +461,16 @@ export const ConfigPanel: React.FC<ConfigPanelProps> = ({ onSave, initialConfig 
   // ========== HANDLERS ==========
   const updateConfig = useCallback(<K extends keyof AppConfig>(key: K, value: AppConfig[K]) => {
     setConfig(prev => ({ ...prev, [key]: value }));
+    // Mirror the Associates tag to a plain localStorage key so the public
+    // landing-page demo and any non-encrypted surface can read it without
+    // going through SecureStorage.
+    if (key === 'amazonTag' && typeof window !== 'undefined') {
+      try {
+        const v = String(value ?? '').trim();
+        if (v) window.localStorage.setItem('amzwp.affiliateTag', v);
+        else window.localStorage.removeItem('amzwp.affiliateTag');
+      } catch { /* storage disabled — non-fatal */ }
+    }
     // Clear validation error when field is updated
     if (validationErrors[key as string]) {
       setValidationErrors(prev => {
