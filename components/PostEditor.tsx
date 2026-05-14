@@ -55,7 +55,7 @@ import { useReducedMotion } from '../hooks/useReducedMotion';
 import { useDragAndDrop } from '../hooks/useDragAndDrop';
 import { toast } from 'sonner';
 import { sanitizeHtml } from '../lib/sanitize';
-import { verifyAsin } from '../src/lib/amazon.functions';
+import { verifyAsin } from '@/src/lib/amazon.functions';
 
 // ============================================================================
 // CONSTANTS
