@@ -340,6 +340,31 @@ function SocialProof() {
 
 function DemoSection() {
   const [mode, setMode] = useState<'ELITE_BENTO' | 'TACTICAL_LINK'>('ELITE_BENTO');
+  const [tag, setTag] = useState<string>('amzwp-20');
+  const [tagSaved, setTagSaved] = useState(false);
+
+  // Hydrate from localStorage on mount (avoids SSR mismatch).
+  useEffect(() => {
+    try {
+      const saved = window.localStorage.getItem('amzwp.affiliateTag');
+      if (saved) setTag(saved);
+    } catch { /* ignore */ }
+  }, []);
+
+  const tagPattern = /^[a-z0-9][a-z0-9-]{1,18}-(20|21|22|23)$/i;
+  const tagValid = tagPattern.test(tag.trim());
+
+  const handleSaveTag = () => {
+    try {
+      const v = tag.trim();
+      if (tagValid) {
+        window.localStorage.setItem('amzwp.affiliateTag', v);
+        setTagSaved(true);
+        setTimeout(() => setTagSaved(false), 2000);
+      }
+    } catch { /* ignore */ }
+  };
+
   const product = useMemo(
     () => ({ ...DEMO_PRODUCT, deploymentMode: mode }),
     [mode],
@@ -357,6 +382,38 @@ function DemoSection() {
           <p className="text-gray-400 max-w-xl mx-auto">
             Schema.org markup, EEAT signals, FAQ blocks, Prime badges, real ratings — every box
             engineered for SERP, AEO, and conversion.
+          </p>
+        </div>
+
+        {/* Tag tester — set your real Amazon Associates tag and the demo link updates live */}
+        <div className="max-w-xl mx-auto mb-8 bg-dark-900/60 border border-dark-800 rounded-2xl p-5">
+          <label htmlFor="demo-tag" className="block text-xs uppercase tracking-[0.2em] text-brand-400 font-bold mb-2">
+            Your Amazon Associates tag
+          </label>
+          <div className="flex gap-2">
+            <input
+              id="demo-tag"
+              type="text"
+              value={tag}
+              onChange={(e) => setTag(e.target.value)}
+              placeholder="papalex-20"
+              maxLength={32}
+              className={`flex-1 bg-dark-950 border rounded-lg px-3 py-2 text-sm text-white placeholder:text-gray-600 focus:outline-none focus:ring-2 focus:ring-brand-500 ${
+                tag && !tagValid ? 'border-red-500/60' : 'border-dark-700'
+              }`}
+            />
+            <button
+              onClick={handleSaveTag}
+              disabled={!tagValid}
+              className="bg-brand-500 hover:bg-brand-400 disabled:opacity-40 disabled:cursor-not-allowed text-white text-sm font-bold px-4 py-2 rounded-lg transition"
+            >
+              {tagSaved ? 'Saved ✓' : 'Save'}
+            </button>
+          </div>
+          <p className="text-xs text-gray-500 mt-2">
+            {tag && !tagValid
+              ? 'Tag must look like xxxxx-20 (or -21/-22/-23).'
+              : 'Saved locally and reused across the dashboard. The demo link below updates instantly.'}
           </p>
         </div>
 
@@ -378,7 +435,7 @@ function DemoSection() {
 
         <div className="bg-gradient-to-br from-dark-900 to-dark-950 rounded-3xl border border-dark-800 p-4 md:p-8 shadow-2xl shadow-brand-500/5">
           <div className="bg-white rounded-2xl overflow-hidden">
-            <PremiumProductBox product={product} mode={mode} affiliateTag="amzwp-20" />
+            <PremiumProductBox product={product} mode={mode} affiliateTag={tagValid ? tag.trim() : 'amzwp-20'} />
           </div>
         </div>
       </div>
