@@ -112,11 +112,11 @@ export const Route = createFileRoute('/')({
 
 const DEMO_PRODUCT: ProductDetails = {
   id: 'demo-1',
-  asin: 'B0CHX1W1XY',
-  title: 'Sony WH-1000XM5 Wireless Industry-Leading Noise-Canceling Headphones',
+  asin: 'B09XS7JWHH',
+  title: 'Sony WH-1000XM5 Wireless Industry-Leading Noise-Canceling Headphones (Black)',
   price: '$328.00',
   imageUrl:
-    'https://m.media-amazon.com/images/I/51aXvjzcukL._AC_SL1500_.jpg',
+    'https://m.media-amazon.com/images/I/61+CLnymfOL._AC_SL1500_.jpg',
   rating: 4.7,
   reviewCount: 12480,
   brand: 'Sony',
