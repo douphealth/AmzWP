@@ -178,7 +178,21 @@ export const PremiumProductBox: React.FC<PremiumProductBoxProps> = ({
   const [isVisible, setIsVisible] = useState(false);
   const cardRef = useRef<HTMLDivElement>(null);
 
-  const amazonLink = `https://www.amazon.com/dp/${product.asin}?tag=${affiliateTag}`;
+  // Build a guaranteed-resolvable Amazon URL.
+  // - Validate ASIN shape (B0 + 8 alphanum). If invalid, link to a search instead of a 404 PDP.
+  // - Only append ?tag= when the tag looks like a real Associates tag (xxx-20 / -21 / -22 etc.),
+  //   not the placeholder "amzwp-20" used in demos.
+  const amazonLink = useMemo(() => {
+    const asin = (product.asin || '').trim().toUpperCase();
+    const isValidAsin = /^B0[A-Z0-9]{8}$/.test(asin);
+    const tag = (affiliateTag || '').trim();
+    const isPlaceholderTag = !tag || tag === 'amzwp-20' || tag.startsWith('your-');
+    const isRealLookingTag = /^[a-z0-9][a-z0-9-]{1,18}-(20|21|22|23)$/i.test(tag);
+    const tagParam = !isPlaceholderTag && isRealLookingTag ? `?tag=${tag}` : '';
+    if (isValidAsin) return `https://www.amazon.com/dp/${asin}${tagParam}`;
+    const q = encodeURIComponent(product.title || product.brand || '');
+    return `https://www.amazon.com/s?k=${q}${tagParam ? `&tag=${tag}` : ''}`;
+  }, [product.asin, product.title, product.brand, affiliateTag]);
 
   const generatePlaceholderSvg = (text: string) =>
     `data:image/svg+xml,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="600" height="600" viewBox="0 0 600 600"><rect fill="#f1f5f9" width="600" height="600"/><text x="300" y="310" text-anchor="middle" font-family="system-ui,sans-serif" font-size="28" font-weight="bold" fill="#94a3b8">${text}</text></svg>`)}`;
