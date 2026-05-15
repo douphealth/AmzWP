@@ -64,15 +64,17 @@ const App: React.FC = () => {
               </div>
             )}
           >
-            <SitemapScanner
-              onPostSelect={(post) => {
-                setSelectedPost(post);
-                setStep(AppStep.EDITOR);
-              }}
-              savedState={sitemap}
-              onStateChange={setSitemap}
-              config={config}
-            />
+            <Suspense fallback={<LoadingSpinner message="Loading Scanner" />}>
+              <SitemapScanner
+                onPostSelect={(post) => {
+                  setSelectedPost(post);
+                  setStep(AppStep.EDITOR);
+                }}
+                savedState={sitemap}
+                onStateChange={setSitemap}
+                config={config}
+              />
+            </Suspense>
           </ErrorBoundary>
         )}
 
