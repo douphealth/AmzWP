@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { AppConfig, AppStep, BlogPost, SitemapState } from '../types';
+import { AppConfigSchema, SitemapStateSchema } from '../schemas';
 
 const noopStorage = {
   getItem: () => null,
