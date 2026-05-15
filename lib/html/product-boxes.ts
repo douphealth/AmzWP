@@ -279,7 +279,7 @@ ${tableProducts.map(p => `<td style="width:${colWidth}%"><div class="amzwp-ct-sp
 <div><h3>${escAttr(data.title)}</h3><p>${tableProducts.length} products compared</p></div>
 <div class="amzwp-ct-live">Live Prices</div>
 </div>
-<div style="overflow-x:auto"><table><tbody>
+<div class="amzwp-ct-scroll"><table><tbody>
 <tr>
 ${tableProducts.map((p, idx) => `<td class="amzwp-ct-cell-head${idx === 0 ? ' amzwp-ct-top' : ''}" style="width:${colWidth}%">
 ${idx === 0 ? '<div class="amzwp-ct-top-badge">&#9733; Top Pick</div>' : ''}
