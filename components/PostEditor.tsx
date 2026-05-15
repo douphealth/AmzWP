@@ -466,16 +466,32 @@ export const PostEditor: React.FC<PostEditorProps> = ({ post, config, onBack }) 
     return Object.values(productMap).filter((p) => !placedIds.has(p.id));
   }, [editorNodes, productMap]);
 
-  const getContextualProducts = useCallback(
-    (nodeIndex: number): ProductDetails[] => {
-      const unplaced = getUnplacedProducts();
-      const prev = editorNodes[nodeIndex];
-      if (!prev || prev.type !== 'HTML' || !prev.content) return unplaced;
-      return [...unplaced].sort(
-        (a, b) => calculateRelevance(prev.content!, b) - calculateRelevance(prev.content!, a),
+  // Precompute relevance-sorted unplaced products per node index.
+  // Avoids O(N * P log P) recomputation on every hover/render of the
+  // injection menu — calculateRelevance runs once per (node, product)
+  // pair per editorNodes/productMap change instead of per render.
+  const contextualByIndex = useMemo(() => {
+    const unplaced = getUnplacedProducts();
+    const map = new Map<number, ProductDetails[]>();
+    editorNodes.forEach((node, idx) => {
+      if (node.type !== 'HTML' || !node.content) {
+        map.set(idx, unplaced);
+        return;
+      }
+      const content = node.content;
+      map.set(
+        idx,
+        [...unplaced].sort(
+          (a, b) => calculateRelevance(content, b) - calculateRelevance(content, a),
+        ),
       );
-    },
-    [editorNodes, getUnplacedProducts, calculateRelevance],
+    });
+    return map;
+  }, [editorNodes, getUnplacedProducts, calculateRelevance]);
+
+  const getContextualProducts = useCallback(
+    (nodeIndex: number): ProductDetails[] => contextualByIndex.get(nodeIndex) ?? [],
+    [contextualByIndex],
   );
 
   // Derived counts
