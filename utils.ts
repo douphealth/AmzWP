@@ -33,6 +33,7 @@ import {
 } from './types';
 import { deduplicateRequest } from './lib/request-dedup';
 import { supabase } from './src/integrations/supabase/client';
+import { withRetry } from './lib/retry';
 
 // ============================================================================
 // CACHE & STORAGE CLASSES
