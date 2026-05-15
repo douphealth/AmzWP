@@ -40,6 +40,7 @@ import {
   splitContentIntoBlocks,
   IntelligenceCache,
   generateProductBoxHtml,
+  wrapWithProductBoxStyles,
   generateComparisonTableHtml,
   fetchProductByASIN,
   sanitizeAppConfig,
