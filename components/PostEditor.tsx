@@ -899,7 +899,7 @@ export const PostEditor: React.FC<PostEditorProps> = ({ post, config, onBack }) 
   // ========================================================================
 
   const generateFinalHtml = useCallback((): string => {
-    return editorNodes
+    const body = editorNodes
       .map((node) => {
         if (node.type === 'HTML') return sanitizeHtml(node.content || '');
         if (node.type === 'PRODUCT' && node.productId && productMap[node.productId]) {
@@ -919,6 +919,13 @@ export const PostEditor: React.FC<PostEditorProps> = ({ post, config, onBack }) 
         return '';
       })
       .join('\n\n');
+    // Hoist the shared product-box CSS exactly once. wrapWithProductBoxStyles
+    // is idempotent — no-op when the marker is already present.
+    const hasBoxes = editorNodes.some(
+      (n) => (n.type === 'PRODUCT' && n.productId && productMap[n.productId]) ||
+        (n.type === 'COMPARISON' && n.comparisonData),
+    );
+    return hasBoxes ? wrapWithProductBoxStyles(body) : body;
   }, [editorNodes, productMap, config.amazonTag]);
 
   const handlePush = useCallback(async () => {
