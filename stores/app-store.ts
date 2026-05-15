@@ -69,6 +69,23 @@ export const useAppStore = create<AppState>()(
         config: state.config,
         sitemap: state.sitemap,
       }),
+      // Validate persisted payloads — corrupted/tampered localStorage values
+      // are silently dropped to defaults instead of crashing the app.
+      merge: (persisted, current) => {
+        if (!persisted || typeof persisted !== 'object') return current;
+        const p = persisted as Partial<AppState>;
+        const safeConfig = AppConfigSchema.partial()
+          .safeParse(p.config ?? {});
+        const safeSitemap = SitemapStateSchema.safeParse(p.sitemap ?? current.sitemap);
+        return {
+          ...current,
+          hasEntered: typeof p.hasEntered === 'boolean' ? p.hasEntered : current.hasEntered,
+          config: safeConfig.success
+            ? { ...current.config, ...(safeConfig.data as Partial<AppConfig>) }
+            : current.config,
+          sitemap: safeSitemap.success ? (safeSitemap.data as SitemapState) : current.sitemap,
+        };
+      },
     }
   )
 );
