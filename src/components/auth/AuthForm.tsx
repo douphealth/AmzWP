@@ -53,6 +53,27 @@ export function AuthForm({ mode, redirectTo }: Props) {
 
   const isSignup = mode === 'signup';
 
+  const onOAuth = async (provider: 'google' | 'github') => {
+    if (busy) return;
+    setBusy(true);
+    try {
+      const { supabase } = await import('../../integrations/supabase/client');
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider,
+        options: {
+          redirectTo: `${window.location.origin}${safeRedirect}`,
+        },
+      });
+      if (error) {
+        toast.error(error.message);
+        setBusy(false);
+      }
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'OAuth failed');
+      setBusy(false);
+    }
+  };
+
   return (
     <div className="min-h-dvh bg-dark-950 text-white relative overflow-hidden">
       <div className="absolute inset-0 pointer-events-none">
