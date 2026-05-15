@@ -10,6 +10,7 @@ import React, {
   useCallback,
   useMemo,
   useEffect,
+  useId,
 } from 'react';
 import { ProductDetails, DeploymentMode, FAQItem } from '../types';
 
@@ -41,7 +42,9 @@ const StarRating: React.FC<{ rating: number; className?: string }> = ({ rating, 
   const full = Math.floor(rating);
   const hasHalf = rating - full >= 0.25;
   const empty = 5 - full - (hasHalf ? 1 : 0);
-  const uid = useMemo(() => `sr-${Math.random().toString(36).slice(2, 8)}`, []);
+  // useId() — stable across SSR + client; previously Math.random() caused hydration mismatch.
+  const reactId = useId();
+  const uid = `sr-${reactId.replace(/:/g, '')}`;
   return (
     <div className={`flex items-center gap-[2px] ${className}`} aria-label={`${rating.toFixed(1)} out of 5 stars`}>
       {Array.from({ length: full }, (_, i) => (
