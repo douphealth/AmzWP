@@ -4,8 +4,12 @@ import { AppShell } from './shell/app-shell';
 import { useAppStore } from './stores/app-store';
 import { AppStep } from './types';
 import { ConfigPanel } from './components/ConfigPanel';
-import { SitemapScanner } from './components/SitemapScanner';
 import { LandingPage } from './components/LandingPage';
+
+// Code-split heavy editor + scanner — only loaded when their step is active.
+const SitemapScanner = lazy(() =>
+  import('./components/SitemapScanner').then((m) => ({ default: m.SitemapScanner }))
+);
 
 const PostEditor = lazy(() =>
   import('./components/PostEditor').then((m) => ({ default: m.PostEditor }))
