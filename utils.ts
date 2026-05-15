@@ -1623,20 +1623,36 @@ export const callAIProvider = async (
   const provider = config.aiProvider || 'gemini';
   const { temperature = 0.7, maxTokens = 8192, jsonMode = true } = options;
 
-  switch (provider) {
-    case 'gemini':
-      return callGemini(config, systemPrompt, userPrompt, { temperature, maxTokens, jsonMode });
-    case 'openai':
-      return callOpenAI(config, systemPrompt, userPrompt, { temperature, maxTokens, jsonMode });
-    case 'anthropic':
-      return callAnthropic(config, systemPrompt, userPrompt, { temperature, maxTokens });
-    case 'groq':
-      return callGroq(config, systemPrompt, userPrompt, { temperature, maxTokens, jsonMode });
-    case 'openrouter':
-      return callOpenRouter(config, systemPrompt, userPrompt, { temperature, maxTokens });
-    default:
-      throw new Error(`Unknown AI provider: ${provider}`);
-  }
+  const dispatch = (): Promise<AIResponse> => {
+    switch (provider) {
+      case 'gemini':
+        return callGemini(config, systemPrompt, userPrompt, { temperature, maxTokens, jsonMode });
+      case 'openai':
+        return callOpenAI(config, systemPrompt, userPrompt, { temperature, maxTokens, jsonMode });
+      case 'anthropic':
+        return callAnthropic(config, systemPrompt, userPrompt, { temperature, maxTokens });
+      case 'groq':
+        return callGroq(config, systemPrompt, userPrompt, { temperature, maxTokens, jsonMode });
+      case 'openrouter':
+        return callOpenRouter(config, systemPrompt, userPrompt, { temperature, maxTokens });
+      default:
+        throw new Error(`Unknown AI provider: ${provider}`);
+    }
+  };
+
+  // Retry only on transient signals — never on auth/billing/quota errors.
+  return withRetry(dispatch, {
+    retries: 3,
+    baseMs: 600,
+    maxMs: 6000,
+    shouldRetry: (err) => {
+      const msg = String((err as Error)?.message || '').toLowerCase();
+      if (/invalid|unauthorized|api key|credits|insufficient|billing|permission|forbidden|not configured/.test(msg)) {
+        return false;
+      }
+      return /rate limit|429|timeout|network|fetch failed|abort|5\d\d|temporarily|unavailable|overloaded/.test(msg);
+    },
+  });
 };
 
 /**
