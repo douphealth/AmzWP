@@ -466,16 +466,32 @@ export const PostEditor: React.FC<PostEditorProps> = ({ post, config, onBack }) 
     return Object.values(productMap).filter((p) => !placedIds.has(p.id));
   }, [editorNodes, productMap]);
 
-  const getContextualProducts = useCallback(
-    (nodeIndex: number): ProductDetails[] => {
-      const unplaced = getUnplacedProducts();
-      const prev = editorNodes[nodeIndex];
-      if (!prev || prev.type !== 'HTML' || !prev.content) return unplaced;
-      return [...unplaced].sort(
-        (a, b) => calculateRelevance(prev.content!, b) - calculateRelevance(prev.content!, a),
+  // Precompute relevance-sorted unplaced products per node index.
+  // Avoids O(N * P log P) recomputation on every hover/render of the
+  // injection menu — calculateRelevance runs once per (node, product)
+  // pair per editorNodes/productMap change instead of per render.
+  const contextualByIndex = useMemo(() => {
+    const unplaced = getUnplacedProducts();
+    const map = new Map<number, ProductDetails[]>();
+    editorNodes.forEach((node, idx) => {
+      if (node.type !== 'HTML' || !node.content) {
+        map.set(idx, unplaced);
+        return;
+      }
+      const content = node.content;
+      map.set(
+        idx,
+        [...unplaced].sort(
+          (a, b) => calculateRelevance(content, b) - calculateRelevance(content, a),
+        ),
       );
-    },
-    [editorNodes, getUnplacedProducts, calculateRelevance],
+    });
+    return map;
+  }, [editorNodes, getUnplacedProducts, calculateRelevance]);
+
+  const getContextualProducts = useCallback(
+    (nodeIndex: number): ProductDetails[] => contextualByIndex.get(nodeIndex) ?? [],
+    [contextualByIndex],
   );
 
   // Derived counts
@@ -1335,20 +1351,24 @@ export const PostEditor: React.FC<PostEditorProps> = ({ post, config, onBack }) 
                             <div className="h-px bg-slate-100 my-1" />
                             <div className="text-[9px] font-black uppercase text-brand-300 px-3 py-1">Relevant Assets</div>
 
-                            {getContextualProducts(index).map((p) => (
-                              <button
-                                key={p.id}
-                                onClick={() => injectProduct(p.id, index + 1)}
-                                className="text-left px-3 py-2 text-xs font-bold text-brand-600 hover:bg-brand-50 rounded-lg transition-colors truncate w-full flex items-center gap-2"
-                              >
-                                <span className="w-1.5 h-1.5 rounded-full bg-brand-400 flex-shrink-0" />
-                                {p.title}
-                              </button>
-                            ))}
-
-                            {getContextualProducts(index).length === 0 && (
-                              <div className="px-3 py-2 text-[10px] text-slate-400 italic">No assets available</div>
-                            )}
+                            {(() => {
+                              const ctx = getContextualProducts(index);
+                              if (ctx.length === 0) {
+                                return (
+                                  <div className="px-3 py-2 text-[10px] text-slate-400 italic">No assets available</div>
+                                );
+                              }
+                              return ctx.map((p) => (
+                                <button
+                                  key={p.id}
+                                  onClick={() => injectProduct(p.id, index + 1)}
+                                  className="text-left px-3 py-2 text-xs font-bold text-brand-600 hover:bg-brand-50 rounded-lg transition-colors truncate w-full flex items-center gap-2"
+                                >
+                                  <span className="w-1.5 h-1.5 rounded-full bg-brand-400 flex-shrink-0" />
+                                  {p.title}
+                                </button>
+                              ));
+                            })()}
                           </div>
                         </div>
                       </div>
