@@ -163,27 +163,23 @@ const generateProductFaqs = (p: ProductDetails): { q: string; a: string }[] => {
 // ---------------------------------------------------------------------------
 
 const tacticalLink = (p: ProductDetails, url: string, s: number): string => {
-  const priceNote = p.prime ? 'Prime delivery eligible' : 'Current Amazon offer';
+  const priceNote = p.prime ? 'Prime eligible' : 'Amazon offer';
   const title = escAttr(p.title);
   return `<div class="amzwp-tl">
-<div style="position:relative">
-<img class="amzwp-tl-img" src="${escAttr(p.imageUrl)}" alt="${title}">
-${p.prime ? '<div class="amzwp-tl-prime">&#10003; Prime</div>' : ''}
-</div>
+<img class="amzwp-tl-img" src="${escAttr(p.imageUrl)}" alt="${title}" loading="lazy">
 <div class="amzwp-tl-body">
-<span class="amzwp-tl-tag">Editor's pick</span><span class="amzwp-tl-brand">${escAttr(p.brand || 'Amazon Favorite')}</span>
+<span class="amzwp-tl-tag">Editor's pick</span>
 <h4 class="amzwp-tl-title">${title}</h4>
 <div class="amzwp-tl-meta">
 <span class="amzwp-stars">${'&#9733;'.repeat(s)}${'&#9734;'.repeat(5 - s)}</span>
-<span style="color:#475569;font-weight:700">${(p.reviewCount || 0).toLocaleString()} reviews</span>
-<span style="color:#94a3b8">&bull;</span>
+<span>${(p.reviewCount || 0).toLocaleString()} reviews</span>
+<span>&bull;</span>
 <span style="color:#0f766e;font-weight:700">${priceNote}</span>
 </div>
 </div>
 <div class="amzwp-tl-price">
-<div class="amzwp-tl-price-label">Current price</div>
 <div class="amzwp-tl-price-val">${escAttr(p.price)}</div>
-<a class="amzwp-cta" href="${escAttr(url)}" target="_blank" rel="nofollow sponsored noopener">Check Price &rarr;</a>
+<a class="amzwp-tl-cta" href="${escAttr(url)}" target="_blank" rel="nofollow sponsored noopener">View &rarr;</a>
 </div>
 </div>`;
 };
@@ -193,44 +189,46 @@ const eliteBento = (p: ProductDetails, url: string, s: number, date: string): st
   const verdict = p.verdict || generateSmartVerdict(p);
   const faqs = generateProductFaqs(p);
   const title = escAttr(p.title);
-  const reviewLabel = `${(p.reviewCount || 0).toLocaleString()} verified reviews`;
+  const reviewLabel = `${(p.reviewCount || 0).toLocaleString()} reviews`;
 
   const faqHtml = faqs.map(f =>
-    `<div class="amzwp-eb-faq"><div class="amzwp-eb-faq-q">${escAttr(f.q)}</div><div class="amzwp-eb-faq-a">${escAttr(f.a)}</div></div>`
+    `<div class="amzwp-eb-faq"><div class="amzwp-eb-faq-q">${escAttr(f.q)}</div><p class="amzwp-eb-faq-a">${escAttr(f.a)}</p></div>`
   ).join('');
 
   const bulletHtml = bullets.map(c =>
-    `<div class="amzwp-eb-bullet"><b>+</b><span>${escAttr(c)}</span></div>`
+    `<li class="amzwp-eb-bullet"><span>${escAttr(c)}</span></li>`
   ).join('');
 
   return `<section class="amzwp-eb" aria-label="Recommended product">
-<div class="amzwp-eb-head">
-<div><span class="amzwp-eb-pill">Editor's Choice</span><span class="amzwp-eb-sub">High-conviction pick</span></div>
-<span class="amzwp-eb-date">Verified ${date}</span>
+<div class="amzwp-eb-bar">
+<span class="amzwp-eb-pill">&#9733; Editor's Choice</span>
+<span class="amzwp-eb-date">Verified &middot; ${date}</span>
 </div>
 <div class="amzwp-eb-main">
 <div class="amzwp-eb-imgcol">
-<div class="amzwp-eb-rating"><span class="amzwp-stars">${'&#9733;'.repeat(s)}</span><span>${reviewLabel}</span></div>
-<img class="amzwp-eb-img" src="${escAttr(p.imageUrl)}" alt="${title}">
-${p.prime ? '<div class="amzwp-eb-prime">Prime delivery</div>' : ''}
+<img class="amzwp-eb-img" src="${escAttr(p.imageUrl)}" alt="${title}" loading="lazy">
+<div class="amzwp-eb-rating"><span class="amzwp-stars">${'&#9733;'.repeat(s)}</span><span>${(p.rating || 4.5).toFixed(1)}</span><span style="color:#94a3b8">(${reviewLabel})</span></div>
+${p.prime ? '<div class="amzwp-eb-prime">&#9889; Prime</div>' : ''}
 </div>
 <div class="amzwp-eb-body">
-<span class="amzwp-eb-cat">${escAttr(p.category || 'Featured')}</span><span class="amzwp-eb-brand">${escAttr(p.brand || 'Amazon bestseller')}</span>
+<div class="amzwp-eb-meta">
+<span class="amzwp-eb-cat">${escAttr(p.category || 'Featured')}</span>
+${p.brand ? `<span class="amzwp-eb-brand">by ${escAttr(p.brand)}</span>` : ''}
+</div>
 <h3 class="amzwp-eb-title">${title}</h3>
 <div class="amzwp-eb-verdict">${escAttr(verdict)}</div>
-<div class="amzwp-eb-bullets">${bulletHtml}</div>
-<div class="amzwp-eb-foot">
+<ul class="amzwp-eb-bullets">${bulletHtml}</ul>
+<div class="amzwp-eb-pricebar">
 <div>
-<div class="amzwp-eb-price-label">Current Amazon price</div>
-<div class="amzwp-eb-price-val">${escAttr(p.price)}</div>
-<div style="margin-top:6px;color:#0f766e;font-size:11px;font-weight:700">${p.prime ? 'Fast Prime shipping available' : 'Availability may vary by seller'}</div>
+<span class="amzwp-eb-price-label">Best price today</span>
+<span class="amzwp-eb-price-val">${escAttr(p.price)}${p.prime ? '<span class="amzwp-eb-price-note">FREE delivery</span>' : ''}</span>
 </div>
-<a class="amzwp-cta amzwp-cta-lg" href="${escAttr(url)}" target="_blank" rel="nofollow sponsored noopener" aria-label="Check price for ${title} on Amazon">Check Price <span>&rarr;</span></a>
-</div>
+<a class="amzwp-cta" href="${escAttr(url)}" target="_blank" rel="nofollow sponsored noopener" aria-label="Check price for ${title} on Amazon">Check Price <span>&rarr;</span></a>
 </div>
 </div>
-<div class="amzwp-eb-faqs"><div class="amzwp-eb-faqs-title">Frequently Asked Questions</div>${faqHtml}</div>
-<div class="amzwp-eb-trust"><span>Secure Checkout</span><span>Fast Shipping</span><span>Easy Returns</span><span>Amazon Verified</span></div>
+</div>
+<div class="amzwp-eb-faqs"><h4 class="amzwp-eb-faqs-title">Common Questions</h4>${faqHtml}</div>
+<div class="amzwp-eb-trust"><span>&#10003; Amazon Verified</span><span>&#128274; Secure Checkout</span><span>&#8634; 30-Day Returns</span></div>
 </section>`;
 };
 
