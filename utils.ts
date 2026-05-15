@@ -3941,11 +3941,12 @@ const buildFaqsFromApiData = (result: any, product: { title: string; price: stri
 // PRODUCT BOX HTML — moved to lib/html/product-boxes.ts (hoisted CSS).
 // generateProductBoxHtml + generateComparisonTableHtml are re-exported below.
 // ============================================================================
-export {
+import {
   generateProductBoxHtml,
   getProductBoxStyles,
   wrapWithProductBoxStyles,
 } from './lib/html/product-boxes';
+export { generateProductBoxHtml, getProductBoxStyles, wrapWithProductBoxStyles };
 
 // ============================================================================
 // COMPARISON TABLE HTML GENERATION
