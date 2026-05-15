@@ -1477,20 +1477,27 @@ export const pushToWordPress = async (
   const apiUrl = `${getWordPressApiBaseUrl(config.wpUrl)}/posts/${postId}`;
   const auth = btoa(`${config.wpUser}:${config.wpAppPassword}`);
 
-  const response = await fetchWithTimeout(
-    apiUrl,
-    15000,
-    {
+  // Retry transient WP errors (overloaded shared hosts often return 502/503/504).
+  // Auth/validation failures (4xx other than 408/425/429) fail fast.
+  const { withRetry } = await import('./lib/retry');
+  const response = await withRetry(
+    () => fetchWithTimeout(apiUrl, 15000, {
       method: 'POST',
       headers: {
         'Authorization': `Basic ${auth}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({
-        content,
-        status: 'publish',
-      }),
-    }
+      body: JSON.stringify({ content, status: 'publish' }),
+    }),
+    {
+      retries: 3,
+      baseMs: 600,
+      shouldRetry: (err) => {
+        const e = err as { name?: string; status?: number };
+        if (e?.name === 'AbortError') return true;
+        return false; // fetchWithTimeout doesn't throw on bad status; we check below
+      },
+    },
   );
 
   if (!response.ok) {
