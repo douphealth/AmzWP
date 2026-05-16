@@ -7,11 +7,7 @@ import { componentTagger } from 'lovable-tagger';
 
 export default defineConfig(({ mode }) => ({
   plugins: [
-    tanstackStart({
-      server: {
-        entry: 'server',
-      },
-    }),
+    tanstackStart(),
     react(),
     tsConfigPaths({ projects: ['./tsconfig.json'] }),
     tailwindcss(),
