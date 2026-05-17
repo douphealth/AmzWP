@@ -18,4 +18,15 @@ export default defineConfig(({ mode }) => ({
     port: 8080,
     allowedHosts: true,
   },
+  environments: {
+    server: {
+      build: {
+        rollupOptions: {
+          output: {
+            inlineDynamicImports: true,
+          },
+        },
+      },
+    },
+  },
 }));
