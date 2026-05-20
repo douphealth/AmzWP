@@ -130,7 +130,7 @@ function RootDocument({ children }: { children: ReactNode }) {
       <head>
         <HeadContent />
       </head>
-      <body className="bg-dark-950 text-slate-200 antialiased">
+      <body className="bg-paper text-ink antialiased">
         <div id="root">{children}</div>
         <Scripts />
       </body>

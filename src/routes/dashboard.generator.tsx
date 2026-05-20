@@ -24,10 +24,10 @@ export const Route = createFileRoute('/dashboard/generator')({
 
 function GeneratorPage() {
   return (
-    <div className="-mx-6 -my-10 min-h-[calc(100dvh-5rem)] overflow-hidden bg-dark-950">
+    <div className="dark-canvas min-h-dvh overflow-hidden bg-dark-950">
       <Suspense
         fallback={
-          <div className="min-h-[calc(100dvh-5rem)] flex items-center justify-center text-gray-400">
+          <div className="min-h-dvh flex items-center justify-center text-gray-400">
             <div className="flex items-center gap-3 text-sm font-semibold">
               <div className="w-5 h-5 border-2 border-brand-500 border-t-transparent rounded-full animate-spin" />
               Loading generator…
