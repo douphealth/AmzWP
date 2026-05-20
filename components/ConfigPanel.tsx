@@ -490,12 +490,15 @@ export const ConfigPanel: React.FC<ConfigPanelProps> = ({ onSave, initialConfig 
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
   const [isSaving, setIsSaving] = useState(false);
 
-  // Decrypt initial config on mount (sync operation)
+  // Decrypt initial config on mount (sync first, then async pass for AES-GCM v3 values)
   const [config, setConfig] = useState<AppConfig>(() => decryptConfig(initialConfig));
 
-  // Re-decrypt when initialConfig changes
+  // Re-decrypt when initialConfig changes — async pass recovers AES-encrypted secrets
   useEffect(() => {
+    let cancelled = false;
     setConfig(decryptConfig(initialConfig));
+    decryptConfigAsync(initialConfig).then(c => { if (!cancelled) setConfig(c); }).catch(() => { /* noop */ });
+    return () => { cancelled = true; };
   }, [initialConfig]);
 
   // ---------- Presets ----------
