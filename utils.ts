@@ -2241,7 +2241,7 @@ export const analyzeContentAndFindProduct = async (
             break;
           }
           try {
-            const result = await fetchProductByASIN(p1.asin, config.serpApiKey, tracker);
+            const result = await lookupAsin(p1.asin, config, tracker);
             if (result) productData = result;
           } catch (e: any) {
             if (e instanceof SerpApiError && e.isFatal) {
@@ -2266,7 +2266,7 @@ export const analyzeContentAndFindProduct = async (
             break;
           }
           try {
-            productData = await searchAmazonProduct(p1.name, config.serpApiKey, tracker);
+            productData = await lookupAmazonSearch(p1.name, config, tracker);
           } catch (e: any) {
             if (e instanceof SerpApiError && e.isFatal) {
               hasFatalSerpError = true;
@@ -2466,7 +2466,7 @@ export const analyzeContentAndFindProduct = async (
         if (config.serpApiKey) {
           try {
             if (asin) {
-              const asinResult = await fetchProductByASIN(asin, config.serpApiKey);
+              const asinResult = await lookupAsin(asin, config);
               if (asinResult) {
                 productData = asinResult;
               }
@@ -2474,7 +2474,7 @@ export const analyzeContentAndFindProduct = async (
 
             if (!productData.asin) {
               const searchQuery = optimizeSearchQuery(product.searchQuery || product.title);
-              productData = await searchAmazonProduct(searchQuery, config.serpApiKey);
+              productData = await lookupAmazonSearch(searchQuery, config);
             }
           } catch (e: any) {
             if (e instanceof SerpApiError && e.isFatal) {
@@ -2595,7 +2595,7 @@ export const analyzeContentAndFindProduct = async (
           let productData: Partial<ProductDetails> = {};
           if (p1.asin) {
             try {
-              const asinResult = await fetchProductByASIN(p1.asin, config.serpApiKey);
+              const asinResult = await lookupAsin(p1.asin, config);
               if (asinResult) productData = asinResult;
             } catch (e: any) {
               if (e instanceof SerpApiError && e.isFatal) throw e;
@@ -2606,7 +2606,7 @@ export const analyzeContentAndFindProduct = async (
               continue;
             }
             try {
-              productData = await searchAmazonProduct(p1.name, config.serpApiKey);
+              productData = await lookupAmazonSearch(p1.name, config);
             } catch (e: any) {
               if (e instanceof SerpApiError && e.isFatal) throw e;
               if (e instanceof SerpApiError) fallbackSerpError = e.message;
