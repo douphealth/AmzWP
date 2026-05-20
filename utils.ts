@@ -415,6 +415,34 @@ class SecureStorageClass {
 
 export   const SecureStorage = new SecureStorageClass();
 
+const ENCRYPTED_SECRET_PREFIX_RE = /^v[23]:/;
+
+export const isEncryptedSecretPayload = (value: string | undefined): boolean =>
+  typeof value === 'string' && ENCRYPTED_SECRET_PREFIX_RE.test(value);
+
+export const decodeStoredSecretSync = (value: string | undefined): string => {
+  if (!value) return '';
+  if (!isEncryptedSecretPayload(value)) return value;
+  try {
+    return SecureStorage.decryptSync(value);
+  } catch {
+    return value;
+  }
+};
+
+export const decodeStoredSecret = async (value: string | undefined): Promise<string> => {
+  if (!value) return '';
+  if (!isEncryptedSecretPayload(value)) return value;
+  try {
+    if (value.startsWith('v3:')) {
+      return await SecureStorage.decrypt(value);
+    }
+    return SecureStorage.decryptSync(value);
+  } catch {
+    return decodeStoredSecretSync(value);
+  }
+};
+
 
 
 
@@ -1722,7 +1750,7 @@ export const callAIProvider = async (
 const extractApiKey = (rawKey: string | undefined, prefix?: string): string => {
   if (!rawKey) return '';
 
-  const decrypted = SecureStorage.decryptSync(rawKey);
+  const decrypted = decodeStoredSecretSync(rawKey);
 
   if (prefix) {
     if (decrypted.startsWith(prefix)) return decrypted;

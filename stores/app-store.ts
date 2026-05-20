@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { AppConfig, AppStep, BlogPost, SitemapState } from '../types';
 import { AppConfigSchema, SitemapStateSchema } from '../schemas';
-import { SecureStorage } from '../utils';
+import { SecureStorage, decodeStoredSecretSync, isEncryptedSecretPayload } from '../utils';
 
 const noopStorage = {
   getItem: () => null,
@@ -48,9 +48,9 @@ const decryptPersistedConfig = (config: Partial<AppConfig> | undefined): Partial
   for (const field of SENSITIVE_CONFIG_FIELDS) {
     const raw = next[field] as string | undefined;
     if (typeof raw !== 'string' || !raw) continue;
-    try {
-      (next as Record<string, unknown>)[field] = SecureStorage.decryptSync(raw);
-    } catch {
+    if (isEncryptedSecretPayload(raw)) {
+      (next as Record<string, unknown>)[field] = decodeStoredSecretSync(raw);
+    } else {
       (next as Record<string, unknown>)[field] = raw;
     }
   }
@@ -62,6 +62,7 @@ const encryptPersistedConfig = (config: AppConfig): AppConfig => {
   for (const field of SENSITIVE_CONFIG_FIELDS) {
     const raw = next[field];
     if (typeof raw !== 'string' || !raw) continue;
+    if (isEncryptedSecretPayload(raw)) continue;
     (next as unknown as Record<string, unknown>)[field] = SecureStorage.encryptSync(raw);
   }
   return next;

@@ -16,7 +16,7 @@
 
 import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import { AppConfig, AIProvider, BoxStyle, AmazonRegion } from '../types';
-import { testConnection, SecureStorage, sanitizeAppConfig } from '../utils';
+import { testConnection, SecureStorage, sanitizeAppConfig, decodeStoredSecretSync, decodeStoredSecret, isEncryptedSecretPayload } from '../utils';
 import { toast } from 'sonner';
 
 // ============================================================================
@@ -157,11 +157,7 @@ const isAesEncrypted = (value: string | undefined): boolean =>
  */
 const safeDecrypt = (value: string | undefined): string => {
   if (!value) return '';
-  try {
-    return SecureStorage.decryptSync(value);
-  } catch {
-    return '';
-  }
+  return decodeStoredSecretSync(value);
 };
 
 /**
@@ -194,8 +190,8 @@ const decryptConfigAsync = async (config: AppConfig): Promise<AppConfig> => {
   for (const field of SENSITIVE_FIELDS) {
     const val = config[field as keyof AppConfig] as string | undefined;
     if (!val) { result[field as string] = ''; continue; }
-    if (isAesEncrypted(val)) {
-      result[field as string] = await SecureStorage.decrypt(val);
+    if (isAesEncrypted(val) || isEncryptedSecretPayload(val)) {
+      result[field as string] = await decodeStoredSecret(val);
     } else {
       result[field as string] = safeDecrypt(val);
     }
