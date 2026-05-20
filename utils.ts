@@ -2185,10 +2185,11 @@ export const analyzeContentAndFindProduct = async (
   const cleanContent = stripHtml(truncatedContent);
   const contentLower = cleanContent.toLowerCase();
 
-  const phase1Products = [
+  const phase1Products: Phase1Product[] = [
     ...extractProductsPhase1(truncatedContent, cleanContent),
     ...extractTitleDrivenProductQueries(title).map((query) => ({
       name: query,
+      asin: undefined,
       sourceType: 'title_subject',
       confidence: 78,
     })),
