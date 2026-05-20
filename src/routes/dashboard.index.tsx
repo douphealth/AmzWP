@@ -24,13 +24,14 @@ export const Route = createFileRoute('/dashboard/')({
 function DashboardHome() {
   const [stats, setStats] = useState({ sites: 0, posts: 0 });
   const [loading, setLoading] = useState(true);
+  const db = supabase as any;
 
   useEffect(() => {
     let cancelled = false;
     (async () => {
       const [sites, posts] = await Promise.all([
-        supabase.from('sites').select('id', { count: 'exact', head: true }),
-        supabase.from('generated_blog_posts').select('id', { count: 'exact', head: true }),
+        db.from('sites').select('id', { count: 'exact', head: true }),
+        db.from('generated_blog_posts').select('id', { count: 'exact', head: true }),
       ]);
       if (cancelled) return;
       setStats({
