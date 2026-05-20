@@ -146,7 +146,14 @@ const SENSITIVE_FIELDS: (keyof AppConfig)[] = [
 ];
 
 /**
- * Safely decrypt a value — tries async AES-GCM first, falls back to sync legacy
+ * Detect whether a stored value is AES-GCM (v3:) encrypted.
+ * v3: payloads cannot be decoded by decryptSync — must use async decrypt.
+ */
+const isAesEncrypted = (value: string | undefined): boolean =>
+  typeof value === 'string' && value.startsWith('v3:');
+
+/**
+ * Safely decrypt a value (sync legacy formats only).
  */
 const safeDecrypt = (value: string | undefined): string => {
   if (!value) return '';
@@ -158,12 +165,40 @@ const safeDecrypt = (value: string | undefined): string => {
 };
 
 /**
- * Decrypt all sensitive fields from config (sync for initial render)
+ * Decrypt all sensitive fields from config (sync for initial render).
+ * If any field is AES-GCM (v3:) encrypted, returns the value unchanged so
+ * that the async decrypt pass can recover it (otherwise we'd silently wipe
+ * the user's saved secret).
  */
 const decryptConfig = (config: AppConfig): AppConfig => {
   const result: Record<string, any> = { ...config };
   for (const field of SENSITIVE_FIELDS) {
-    result[field as string] = safeDecrypt(config[field as keyof AppConfig] as string);
+    const raw = config[field as keyof AppConfig] as string | undefined;
+    if (isAesEncrypted(raw)) {
+      // Preserve ciphertext; decryptConfigAsync will decode it.
+      result[field as string] = raw;
+    } else {
+      result[field as string] = safeDecrypt(raw);
+    }
+  }
+  return sanitizeAppConfig(result as AppConfig);
+};
+
+/**
+ * Async decrypt — handles AES-GCM (v3:) values produced by encryptConfigAsync.
+ * REQUIRED for loading saved presets, otherwise sensitive fields come back blank
+ * and the preset appears "lost".
+ */
+const decryptConfigAsync = async (config: AppConfig): Promise<AppConfig> => {
+  const result: Record<string, any> = { ...config };
+  for (const field of SENSITIVE_FIELDS) {
+    const val = config[field as keyof AppConfig] as string | undefined;
+    if (!val) { result[field as string] = ''; continue; }
+    if (isAesEncrypted(val)) {
+      result[field as string] = await SecureStorage.decrypt(val);
+    } else {
+      result[field as string] = safeDecrypt(val);
+    }
   }
   return sanitizeAppConfig(result as AppConfig);
 };
