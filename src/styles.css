@@ -1,6 +1,6 @@
+@import url('https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800&family=Manrope:wght@300;400;500;600;700;800&display=swap');
 @import "tailwindcss";
 @plugin "tailwindcss-animate";
-@import url('https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800&family=Manrope:wght@300;400;500;600;700;800&display=swap');
 
 /* ============================================================
    Theme tokens — Editorial Light + legacy dark palette
