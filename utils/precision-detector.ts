@@ -1201,8 +1201,9 @@ export async function detectProductsPrecision(
   return {
     products,
     comparison,
-    contentType: 'informational',
+    contentType: detectContentType(htmlContent),
     candidateCount: allCandidates.length,
   };
 }
+
 
