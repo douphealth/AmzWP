@@ -855,46 +855,108 @@ export const PostEditor: React.FC<PostEditorProps> = ({ post, config, onBack }) 
     return null;
   };
 
-  const handleAddManualProduct = useCallback(async () => {
-    const asin = extractASIN(manualAsin);
-    if (!asin) { toast('Invalid ASIN or Amazon URL.'); return; }
-    if (!config.serpApiKey) { toast('SerpAPI key required. Configure in Settings.'); return; }
-    if (Object.values(productMap).find((p) => p.asin === asin)) { toast('Product already in staging'); setManualAsin(''); return; }
+  /**
+   * Core add-by-ASIN-or-URL routine. Reused by manual sidebar input,
+   * the inline BlockInserter, and the contentEditable paste handler.
+   * If insertAtIndex is provided, the new product is also injected
+   * into the canvas at that position.
+   */
+  const addProductByAsinOrUrl = useCallback(
+    async (input: string, insertAtIndex?: number): Promise<ProductDetails | null> => {
+      const asin = extractASIN(input);
+      if (!asin) { toast('Invalid ASIN or Amazon URL.'); return null; }
+      if (!config.serpApiKey) { toast('SerpAPI key required. Configure in Settings.'); return null; }
 
-    setAddingProduct(true);
-    try {
-      // Pre-flight: confirm the ASIN actually resolves on amazon.com BEFORE we burn a SerpAPI call
-      // or insert a product whose affiliate link would publish as a 404.
-      const reach = await verifyAsin({ data: { asin } });
-      if (!reach.ok) {
-        const msg =
-          reach.reason === 'not_found' ? `ASIN ${asin} returns 404 on amazon.com — not a real product.` :
-          reach.reason === 'invalid_format' ? `ASIN ${asin} is not a valid Amazon ID format.` :
-          reach.reason === 'timeout' ? 'Amazon reachability check timed out. Try again.' :
-          reach.reason === 'redirected_off_product' ? `ASIN ${asin} redirected away from a product page.` :
-          `ASIN ${asin} could not be verified on Amazon (${reach.reason}).`;
-        toast(msg, { duration: 6000 });
-        return;
+      // Already in staging? Just inject.
+      const existing = Object.values(productMap).find((p) => p.asin === asin);
+      if (existing) {
+        if (typeof insertAtIndex === 'number') {
+          const next = [...editorNodes];
+          next.splice(insertAtIndex, 0, {
+            id: `prod-node-${existing.id}-${Date.now()}`,
+            type: 'PRODUCT',
+            productId: existing.id,
+          });
+          setEditorNodes(next);
+          toast(`Inserted: ${existing.title.substring(0, 40)}…`);
+        } else {
+          toast('Product already in staging');
+        }
+        return existing;
       }
 
-      const product = await fetchProductByASIN(asin, config.serpApiKey);
-      if (product?.asin) {
+      setAddingProduct(true);
+      try {
+        const reach = await verifyAsin({ data: { asin } });
+        if (!reach.ok) {
+          const msg =
+            reach.reason === 'not_found' ? `ASIN ${asin} returns 404 on amazon.com — not a real product.` :
+            reach.reason === 'invalid_format' ? `ASIN ${asin} is not a valid Amazon ID format.` :
+            reach.reason === 'timeout' ? 'Amazon reachability check timed out. Try again.' :
+            reach.reason === 'redirected_off_product' ? `ASIN ${asin} redirected away from a product page.` :
+            `ASIN ${asin} could not be verified on Amazon (${reach.reason}).`;
+          toast(msg, { duration: 6000 });
+          return null;
+        }
+
+        const product = await fetchProductByASIN(asin, config.serpApiKey);
+        if (!product?.asin) {
+          toast('ASIN reachable on Amazon, but SerpAPI returned no metadata.');
+          return null;
+        }
+
         setProductMap((prev) => ({ ...prev, [product.id]: product }));
-        toast(`Added & verified: ${product.title.substring(0, 40)}…`);
-        setManualAsin('');
-      } else {
-        toast('ASIN reachable on Amazon, but SerpAPI returned no metadata.');
+
+        if (typeof insertAtIndex === 'number') {
+          const next = [...editorNodes];
+          next.splice(insertAtIndex, 0, {
+            id: `prod-node-${product.id}-${Date.now()}`,
+            type: 'PRODUCT',
+            productId: product.id,
+          });
+          setEditorNodes(next);
+          toast(`Inserted: ${product.title.substring(0, 40)}…`);
+        } else {
+          toast(`Added & verified: ${product.title.substring(0, 40)}…`);
+        }
+
+        return product;
+      } catch (e: any) {
+        const m = e?.message || 'Unknown error';
+        if (m.includes('timeout')) toast('Request timed out. Try again.');
+        else if (m.includes('401')) toast('Invalid SerpAPI key.');
+        else if (m.includes('429')) toast('Rate limit exceeded. Wait and retry.');
+        else toast(`Error: ${m.substring(0, 80)}`);
+        return null;
+      } finally {
+        setAddingProduct(false);
       }
-    } catch (e: any) {
-      const m = e?.message || 'Unknown error';
-      if (m.includes('timeout')) toast('Request timed out. Try again.');
-      else if (m.includes('401')) toast('Invalid SerpAPI key.');
-      else if (m.includes('429')) toast('Rate limit exceeded. Wait and retry.');
-      else toast(`Error: ${m.substring(0, 80)}`);
-    } finally {
-      setAddingProduct(false);
-    }
-  }, [manualAsin, config, productMap]);
+    },
+    [config, productMap, editorNodes, setEditorNodes],
+  );
+
+  const handleAddManualProduct = useCallback(async () => {
+    const product = await addProductByAsinOrUrl(manualAsin);
+    if (product) setManualAsin('');
+  }, [manualAsin, addProductByAsinOrUrl]);
+
+  /**
+   * Paste handler on contentEditable HTML blocks.
+   * If user pastes a string containing an Amazon URL / ASIN, intercept it
+   * and insert a product box right after this block instead of pasting text.
+   */
+  const handleEditableBlockPaste = useCallback(
+    (e: React.ClipboardEvent<HTMLDivElement>, blockIndex: number) => {
+      const text = e.clipboardData.getData('text/plain').trim();
+      if (!text) return;
+      const asin = extractASIN(text);
+      if (!asin) return; // let normal paste happen
+      e.preventDefault();
+      toast('Amazon URL detected — fetching product…');
+      void addProductByAsinOrUrl(text, blockIndex + 1);
+    },
+    [addProductByAsinOrUrl],
+  );
 
   // ========================================================================
   // HTML GENERATION & PUBLISH
