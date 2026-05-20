@@ -105,6 +105,57 @@
 .dark-canvas ::-webkit-scrollbar-track { background: #0a0a0f; }
 .dark-canvas ::-webkit-scrollbar-thumb { background: linear-gradient(180deg, #0ea5e9, #0284c7); border: none; }
 
+/* ============================================================================
+   Editor canvas polish — premium look & feel for the blog post editor where
+   users place Amazon product boxes inline. Adds breathing room, refined
+   typography, and softer borders without touching component logic.
+   ============================================================================ */
+.dark-canvas {
+  font-feature-settings: "ss01", "cv11", "cv02";
+}
+.dark-canvas h1,
+.dark-canvas h2,
+.dark-canvas h3 {
+  letter-spacing: -0.02em;
+}
+.dark-canvas [contenteditable="true"] {
+  outline: none;
+  transition: background-color 160ms ease, box-shadow 160ms ease;
+  border-radius: 12px;
+  padding: 4px 8px;
+  margin: -4px -8px;
+}
+.dark-canvas [contenteditable="true"]:focus {
+  background: rgba(14, 165, 233, 0.06);
+  box-shadow: 0 0 0 1px rgba(14, 165, 233, 0.35);
+}
+.dark-canvas [contenteditable="true"]:hover:not(:focus) {
+  background: rgba(255, 255, 255, 0.02);
+}
+.dark-canvas [contenteditable="true"][data-placeholder]:empty::before {
+  content: attr(data-placeholder);
+  color: rgba(148, 163, 184, 0.45);
+  pointer-events: none;
+}
+.dark-canvas .block-inserter-line {
+  background: linear-gradient(90deg, transparent, rgba(14, 165, 233, 0.45), transparent);
+  height: 1px;
+  opacity: 0;
+  transition: opacity 200ms ease;
+}
+.dark-canvas .block-inserter-zone:hover .block-inserter-line {
+  opacity: 1;
+}
+.dark-canvas .product-box-wrap {
+  position: relative;
+  border-radius: 20px;
+  transition: transform 220ms cubic-bezier(.2,.8,.2,1), box-shadow 220ms ease;
+}
+.dark-canvas .product-box-wrap:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 24px 60px -24px rgba(14, 165, 233, 0.4);
+}
+
 .custom-scrollbar::-webkit-scrollbar { width: 6px; }
 .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
 .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
