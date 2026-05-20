@@ -1079,12 +1079,15 @@ export const ConfigPanel: React.FC<ConfigPanelProps> = ({ onSave, initialConfig 
             
             {/* Header */}
             <div className="flex justify-between items-center p-6 md:p-8 border-b border-dark-800 bg-dark-950/50">
-              <div>
+              <div className="min-w-0 flex-1">
                 <h2 className="text-2xl md:text-3xl font-black text-white tracking-tighter">
                   System Configuration
                 </h2>
                 <p className="text-xs text-gray-500 mt-1">
                   {completionPercentage}% configured
+                  {activePreset && (
+                    <> · <span className="text-brand-400 font-bold">{activePreset.name}</span></>
+                  )}
                 </p>
               </div>
               <button
