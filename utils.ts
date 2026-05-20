@@ -35,6 +35,139 @@ import { deduplicateRequest } from './lib/request-dedup';
 import { supabase } from './src/integrations/supabase/client';
 import { withRetry } from './lib/retry';
 import { fetchWordPressPostContent } from './src/lib/wordpress.functions';
+import { paapiGetItem, paapiSearchItem } from './src/lib/paapi.functions';
+
+// ============================================================================
+// PRODUCT LOOKUP DISPATCHER
+// ============================================================================
+// The app supports two providers for Amazon product enrichment:
+//   1. SerpAPI (cheap, broad, no Associates account required)
+//   2. Amazon PA-API 5.0 (authoritative, requires Associates approval)
+//
+// hasProductLookup(config) reports whether at least one provider is configured.
+// lookupAsin / lookupAmazonSearch pick the best available path automatically:
+// PA-API first when its creds are present (more reliable, official data),
+// falling back to SerpAPI otherwise.
+// ============================================================================
+
+export function hasPaapiCreds(c: Partial<AppConfig>): boolean {
+  return !!(c.amazonAccessKey?.trim() && c.amazonSecretKey?.trim() && c.amazonTag?.trim());
+}
+export function hasSerpApi(c: Partial<AppConfig>): boolean {
+  return !!c.serpApiKey?.trim();
+}
+export function hasProductLookup(c: Partial<AppConfig>): boolean {
+  return hasSerpApi(c) || hasPaapiCreds(c);
+}
+export function missingProductLookupMessage(): string {
+  return 'No Amazon product lookup configured. Add Amazon PA-API credentials (recommended) or a SerpAPI key in Settings > Amazon.';
+}
+
+function paapiToFullProduct(asin: string, mapped: any): ProductDetails {
+  return {
+    id: `prod-${asin}-${Date.now()}`,
+    asin,
+    title: mapped.title || 'Unknown Product',
+    price: mapped.price && mapped.price !== '$XX.XX' ? mapped.price : 'See Price',
+    imageUrl: mapped.imageUrl || `https://images-na.ssl-images-amazon.com/images/P/${asin}.01._SCLZZZZZZZ_.jpg`,
+    rating: mapped.rating || 4.5,
+    reviewCount: mapped.reviewCount || 0,
+    prime: !!mapped.prime,
+    brand: mapped.brand || '',
+    category: 'General',
+    verdict: generateDefaultVerdict(mapped.title || ''),
+    evidenceClaims: (mapped.features && mapped.features.length > 0)
+      ? mapped.features
+      : generateDefaultClaims(),
+    faqs: generateDefaultFaqs(mapped.title || ''),
+    specs: {},
+    insertionIndex: 1,
+    deploymentMode: 'ELITE_BENTO',
+  };
+}
+
+/** Provider-aware ASIN lookup. PA-API first when available. */
+export async function lookupAsin(
+  asin: string,
+  config: Partial<AppConfig>,
+  tracker?: BudgetTracker,
+): Promise<ProductDetails | null> {
+  const normalized = String(asin || '').trim().toUpperCase();
+  if (!/^[A-Z0-9]{10}$/.test(normalized)) throw new Error('Invalid ASIN format');
+
+  if (hasPaapiCreds(config)) {
+    try {
+      const cached = IntelligenceCache.getProduct(normalized);
+      if (cached) return cached;
+      const res = await paapiGetItem({
+        data: {
+          asin: normalized,
+          accessKey: config.amazonAccessKey!,
+          secretKey: config.amazonSecretKey!,
+          partnerTag: config.amazonTag!,
+          region: config.amazonRegion || 'us-east-1',
+        },
+      });
+      if (res?.product) {
+        const product = paapiToFullProduct(normalized, res.product);
+        IntelligenceCache.setProduct(normalized, product);
+        return product;
+      }
+    } catch (e) {
+      // Fall through to SerpAPI if it's configured; otherwise rethrow.
+      if (!hasSerpApi(config)) throw e;
+    }
+  }
+
+  if (hasSerpApi(config)) {
+    return fetchProductByASIN(normalized, config.serpApiKey!, tracker);
+  }
+  throw new Error(missingProductLookupMessage());
+}
+
+/** Provider-aware keyword search. PA-API first when available. */
+export async function lookupAmazonSearch(
+  query: string,
+  config: Partial<AppConfig>,
+  tracker?: BudgetTracker,
+): Promise<Partial<ProductDetails>> {
+  const q = String(query || '').trim();
+  if (!q) return {};
+
+  if (hasPaapiCreds(config)) {
+    try {
+      const res = await paapiSearchItem({
+        data: {
+          keyword: q,
+          accessKey: config.amazonAccessKey!,
+          secretKey: config.amazonSecretKey!,
+          partnerTag: config.amazonTag!,
+          region: config.amazonRegion || 'us-east-1',
+        },
+      });
+      if (res?.product) {
+        return {
+          asin: res.product.asin,
+          title: res.product.title,
+          price: res.product.price,
+          imageUrl: res.product.imageUrl,
+          rating: res.product.rating,
+          reviewCount: res.product.reviewCount,
+          prime: res.product.prime,
+          brand: res.product.brand,
+        };
+      }
+      // No result from PA-API: fall through to SerpAPI if configured.
+    } catch (e) {
+      if (!hasSerpApi(config)) throw e;
+    }
+  }
+
+  if (hasSerpApi(config)) {
+    return searchAmazonProduct(q, config.serpApiKey!, tracker);
+  }
+  throw new Error(missingProductLookupMessage());
+}
 
 // ============================================================================
 // CACHE & STORAGE CLASSES
@@ -2049,13 +2182,13 @@ export const analyzeContentAndFindProduct = async (
     `Budget: ${callBudget} SerpAPI calls · ${phase1Products.length} candidates detected`,
   );
 
-  // Check for SerpAPI key
-  if (!config.serpApiKey || config.serpApiKey.trim().length === 0) {
-    throw new Error('SerpAPI key is required for product detection. Add it in Settings > Amazon.');
+  // Require at least one Amazon product lookup provider (SerpAPI OR PA-API).
+  if (!hasProductLookup(config)) {
+    throw new Error(missingProductLookupMessage());
   }
 
   // Fast path: use the strongest phase-1 signals first, but stay within a strict lookup budget.
-  if (phase1Products.length > 0 && config.serpApiKey) {
+  if (phase1Products.length > 0 && hasProductLookup(config)) {
     tracker.startStage('phase1_lookup', 'Verifying high-confidence candidates against Amazon');
     const quickProducts: ProductDetails[] = [];
     // Smart selection: keep only candidates above the score threshold,
@@ -2108,7 +2241,7 @@ export const analyzeContentAndFindProduct = async (
             break;
           }
           try {
-            const result = await fetchProductByASIN(p1.asin, config.serpApiKey, tracker);
+            const result = await lookupAsin(p1.asin, config, tracker);
             if (result) productData = result;
           } catch (e: any) {
             if (e instanceof SerpApiError && e.isFatal) {
@@ -2133,7 +2266,7 @@ export const analyzeContentAndFindProduct = async (
             break;
           }
           try {
-            productData = await searchAmazonProduct(p1.name, config.serpApiKey, tracker);
+            productData = await lookupAmazonSearch(p1.name, config, tracker);
           } catch (e: any) {
             if (e instanceof SerpApiError && e.isFatal) {
               hasFatalSerpError = true;
@@ -2330,10 +2463,10 @@ export const analyzeContentAndFindProduct = async (
       const batchPromises = batch.map(async ({ key, product, asin }) => {
         let productData: Partial<ProductDetails> = {};
 
-        if (config.serpApiKey) {
+        if (hasProductLookup(config)) {
           try {
             if (asin) {
-              const asinResult = await fetchProductByASIN(asin, config.serpApiKey);
+              const asinResult = await lookupAsin(asin, config);
               if (asinResult) {
                 productData = asinResult;
               }
@@ -2341,7 +2474,7 @@ export const analyzeContentAndFindProduct = async (
 
             if (!productData.asin) {
               const searchQuery = optimizeSearchQuery(product.searchQuery || product.title);
-              productData = await searchAmazonProduct(searchQuery, config.serpApiKey);
+              productData = await lookupAmazonSearch(searchQuery, config);
             }
           } catch (e: any) {
             if (e instanceof SerpApiError && e.isFatal) {
@@ -2452,7 +2585,7 @@ export const analyzeContentAndFindProduct = async (
       throw error;
     }
 
-    if (phase1Products.length > 0 && config.serpApiKey) {
+    if (phase1Products.length > 0 && hasProductLookup(config)) {
       const fallbackProducts: ProductDetails[] = [];
       let fallbackSerpError: string | null = null;
 
@@ -2462,7 +2595,7 @@ export const analyzeContentAndFindProduct = async (
           let productData: Partial<ProductDetails> = {};
           if (p1.asin) {
             try {
-              const asinResult = await fetchProductByASIN(p1.asin, config.serpApiKey);
+              const asinResult = await lookupAsin(p1.asin, config);
               if (asinResult) productData = asinResult;
             } catch (e: any) {
               if (e instanceof SerpApiError && e.isFatal) throw e;
@@ -2473,7 +2606,7 @@ export const analyzeContentAndFindProduct = async (
               continue;
             }
             try {
-              productData = await searchAmazonProduct(p1.name, config.serpApiKey);
+              productData = await lookupAmazonSearch(p1.name, config);
             } catch (e: any) {
               if (e instanceof SerpApiError && e.isFatal) throw e;
               if (e instanceof SerpApiError) fallbackSerpError = e.message;
