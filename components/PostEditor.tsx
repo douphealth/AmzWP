@@ -42,7 +42,9 @@ import {
   generateProductBoxHtml,
   wrapWithProductBoxStyles,
   generateComparisonTableHtml,
-  fetchProductByASIN,
+  lookupAsin,
+  hasProductLookup,
+  missingProductLookupMessage,
   sanitizeAppConfig,
 } from '../utils';
 
