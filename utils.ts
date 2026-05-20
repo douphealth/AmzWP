@@ -2711,8 +2711,9 @@ interface Phase1Product {
   confidence: number;
 }
 
-const CONCRETE_PRODUCT_HINT_PATTERN = /\b(?:pro|max|plus|ultra|mini|lite|se|gen|series|watch|buds|band|tracker|ring|earbuds|headphones|speaker|studio|solo|charge|sense|versa|forerunner|fenix|venu|instinct|paperwhite|scribe|quest|kindle|echo|roomba|airpods|iphone|ipad|macbook|pixel|galaxy|surface|fitbit|garmin|theragun|quietcomfort|soundlink|beam|arc|move|roam)\b/i;
-const KNOWN_PRODUCT_BRAND_PATTERN = /\b(?:apple|samsung|sony|google|microsoft|amazon|bose|jbl|beats|garmin|fitbit|oura|whoop|dyson|shark|ninja|vitamix|breville|instant\s*pot|kindle|echo|roomba|irobot|eufy|roborock|gopro|dji|anker|theragun|sonos|yeti|stanley|hydro\s*flask|logitech|razer|corsair|asus|acer|dell|hp|lenovo|nintendo|xbox|playstation|meta|quest|pixel)\b/i;
+const CONCRETE_PRODUCT_HINT_PATTERN = /\b(?:pro|max|plus|ultra|mini|lite|se|gen|series|watch|buds|band|tracker|ring|earbuds|headphones|speaker|studio|solo|charge|sense|versa|forerunner|fenix|venu|instinct|paperwhite|scribe|quest|kindle|echo|roomba|airpods|iphone|ipad|macbook|pixel|galaxy|surface|fitbit|garmin|theragun|quietcomfort|soundlink|beam|arc|move|roam|supplement|supplements|capsule|capsules|tablet|tablets|gummy|gummies|powder|protein|preworkout|pre-workout|creatine|bcaa|collagen|probiotic|multivitamin|vitamin|fat\s*burner|omega|magnesium|zinc|ashwagandha|electrolyte)\b/i;
+const KNOWN_PRODUCT_BRAND_PATTERN = /\b(?:apple|samsung|sony|google|microsoft|amazon|bose|jbl|beats|garmin|fitbit|oura|whoop|dyson|shark|ninja|vitamix|breville|instant\s*pot|kindle|echo|roomba|irobot|eufy|roborock|gopro|dji|anker|theragun|sonos|yeti|stanley|hydro\s*flask|logitech|razer|corsair|asus|acer|dell|hp|lenovo|nintendo|xbox|playstation|meta|quest|pixel|optimum\s*nutrition|myprotein|ghost|transparent\s*labs|legion|thorne|garden\s*of\s*life|sports\s*research|nature\s*made|now\s*foods|vital\s*proteins|cellucor|on)\b/i;
+const GENERIC_PRODUCT_CATEGORY_PATTERN = /\b(?:weight\s*loss\s+supplements?|supplements?|fat\s*burners?|diet\s*pills?|protein\s+powders?|whey\s+protein|pre\s*-?workouts?|creatine|bcaa|amino\s+acids?|multivitamins?|vitamins?|probiotics?|collagen\s+powders?|omega\s*3|fish\s*oil|electrolyte\s+powders?|magnesium\s+supplements?)\b/i;
 const NON_PRODUCT_EXACT_PHRASES = new Set([
   'key takeaways',
   'what the data actually concluded',
@@ -2749,6 +2750,10 @@ function hasConcreteProductSignals(value: string): boolean {
   }
 
   if (/\b(?:airpods|apple\s*watch|galaxy\s*buds|pixel\s*buds|oura\s*ring|echo\s*dot|fire\s*tv|steam\s*deck|kindle)\b/i.test(normalized)) {
+    return true;
+  }
+
+  if (GENERIC_PRODUCT_CATEGORY_PATTERN.test(normalized)) {
     return true;
   }
 
@@ -2814,7 +2819,35 @@ function articleLooksInformational(title: string, content: string): boolean {
     return false;
   }
 
+  if (GENERIC_PRODUCT_CATEGORY_PATTERN.test(normalizeCandidateText(title))) {
+    return false;
+  }
+
   return !hasConcreteProductSignals(combined);
+}
+
+function extractTitleDrivenProductQueries(title: string): string[] {
+  const normalizedTitle = normalizeCandidateText(title);
+  if (!normalizedTitle) return [];
+
+  const queries = new Set<string>();
+  const subject = extractBestSubject(title);
+
+  if (subject && isProductSubject(subject)) {
+    queries.add(subject.trim());
+  }
+
+  const genericMatches = normalizedTitle.match(/(?:best|top)\s+(?:\d+\s+)?([a-z0-9\s-]{4,80}?)(?:\s+for\s+[^\-:|]+|\s+in\s+\d{4}|\s*[-:|]|$)/i);
+  if (genericMatches?.[1] && GENERIC_PRODUCT_CATEGORY_PATTERN.test(genericMatches[1])) {
+    queries.add(genericMatches[1].trim());
+  }
+
+  for (const match of normalizedTitle.matchAll(new RegExp(GENERIC_PRODUCT_CATEGORY_PATTERN.source, 'gi'))) {
+    const phrase = match[0]?.trim();
+    if (phrase && phrase.length >= 4) queries.add(phrase);
+  }
+
+  return Array.from(queries).slice(0, 3);
 }
 
 function extractProductsPhase1(htmlContent: string, textContent: string): Phase1Product[] {
@@ -2924,6 +2957,10 @@ function extractProductsPhase1(htmlContent: string, textContent: string): Phase1
     if (looksLikeProduct && notSentence) {
       addProduct(boldText, 'bold_mention', 80);
     }
+  }
+
+  for (const titleQuery of extractTitleDrivenProductQueries(textContent.split('\n')[0] || '')) {
+    addProduct(titleQuery, 'title_subject', 78);
   }
 
   // Pattern 5: Comprehensive brand patterns
