@@ -2155,7 +2155,7 @@ export const analyzeContentAndFindProduct = async (
   config: AppConfig,
   options: AnalyzeContentOptions = {},
 ): Promise<AnalysisResult> => {
-  const contentHash = hashString(`${title}_${content.substring(0, 500)}_${content.length}_v2`);
+  const contentHash = hashString(`${title}_${content.substring(0, 500)}_${content.length}_v3`);
 
   const cached = IntelligenceCache.getAnalysis(contentHash);
   if (cached) {
@@ -2185,7 +2185,17 @@ export const analyzeContentAndFindProduct = async (
   const cleanContent = stripHtml(truncatedContent);
   const contentLower = cleanContent.toLowerCase();
 
-  const phase1Products = extractProductsPhase1(truncatedContent, cleanContent);
+  const phase1Products = [
+    ...extractProductsPhase1(truncatedContent, cleanContent),
+    ...extractTitleDrivenProductQueries(title).map((query) => ({
+      name: query,
+      sourceType: 'title_subject',
+      confidence: 78,
+    })),
+  ].filter((product, index, array) => {
+    const key = `${product.asin || ''}:${normalizeProductName(product.name)}`;
+    return index === array.findIndex((candidate) => `${candidate.asin || ''}:${normalizeProductName(candidate.name)}` === key);
+  });
   const lookupBudget = estimateLookupBudget(truncatedContent, phase1Products.length);
 
   // Resolve SerpAPI budget — config-driven with sane defaults.
