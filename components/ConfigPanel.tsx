@@ -455,6 +455,14 @@ export const ConfigPanel: React.FC<ConfigPanelProps> = ({ onSave, initialConfig 
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
   const [isSaving, setIsSaving] = useState(false);
 
+  // Decrypt initial config on mount (sync operation)
+  const [config, setConfig] = useState<AppConfig>(() => decryptConfig(initialConfig));
+
+  // Re-decrypt when initialConfig changes
+  useEffect(() => {
+    setConfig(decryptConfig(initialConfig));
+  }, [initialConfig]);
+
   // ---------- Presets ----------
   const [presets, setPresets] = useState<ConfigPreset[]>(() => loadPresets());
   const [activePresetId, setActivePresetId] = useState<string | null>(() => {
@@ -536,14 +544,6 @@ export const ConfigPanel: React.FC<ConfigPanelProps> = ({ onSave, initialConfig 
     () => presets.find(p => p.id === activePresetId) ?? null,
     [presets, activePresetId]
   );
-
-  // Decrypt initial config on mount (sync operation)
-  const [config, setConfig] = useState<AppConfig>(() => decryptConfig(initialConfig));
-
-  // Re-decrypt when initialConfig changes
-  useEffect(() => {
-    setConfig(decryptConfig(initialConfig));
-  }, [initialConfig]);
 
   // ========== MEMOIZED VALUES ==========
   const currentProvider = useMemo(
