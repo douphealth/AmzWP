@@ -555,10 +555,15 @@ export const ConfigPanel: React.FC<ConfigPanelProps> = ({ onSave, initialConfig 
     }
   }, [activePresetId, config, persistPresets, presets]);
 
-  const handleLoadPreset = useCallback((id: string) => {
+  const handleLoadPreset = useCallback(async (id: string) => {
     const preset = presets.find(p => p.id === id);
     if (!preset) return;
-    setConfig(decryptConfig(preset.config));
+    try {
+      const decrypted = await decryptConfigAsync(preset.config);
+      setConfig(decrypted);
+    } catch {
+      setConfig(decryptConfig(preset.config));
+    }
     setActivePresetId(id);
     try { window.localStorage.setItem('amzwp_active_preset_id', id); } catch { /* noop */ }
     setValidationErrors({});
