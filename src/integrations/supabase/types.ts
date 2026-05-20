@@ -10,82 +10,11 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.1"
+    PostgrestVersion: "14.5"
   }
   public: {
     Tables: {
-      generated_blog_posts: {
-        Row: {
-          content: string
-          created_at: string | null
-          generated_at: string | null
-          id: string
-          internal_links: Json | null
-          item_id: string
-          meta_description: string | null
-          model: string | null
-          neuronwriter_data: Json | null
-          neuronwriter_query_id: string | null
-          primary_keyword: string
-          quality_score: Json | null
-          schema: Json | null
-          secondary_keywords: Json | null
-          seo_title: string | null
-          serp_analysis: Json | null
-          slug: string | null
-          title: string
-          updated_at: string | null
-          user_id: string | null
-          word_count: number | null
-        }
-        Insert: {
-          content: string
-          created_at?: string | null
-          generated_at?: string | null
-          id?: string
-          internal_links?: Json | null
-          item_id: string
-          meta_description?: string | null
-          model?: string | null
-          neuronwriter_data?: Json | null
-          neuronwriter_query_id?: string | null
-          primary_keyword: string
-          quality_score?: Json | null
-          schema?: Json | null
-          secondary_keywords?: Json | null
-          seo_title?: string | null
-          serp_analysis?: Json | null
-          slug?: string | null
-          title: string
-          updated_at?: string | null
-          user_id?: string | null
-          word_count?: number | null
-        }
-        Update: {
-          content?: string
-          created_at?: string | null
-          generated_at?: string | null
-          id?: string
-          internal_links?: Json | null
-          item_id?: string
-          meta_description?: string | null
-          model?: string | null
-          neuronwriter_data?: Json | null
-          neuronwriter_query_id?: string | null
-          primary_keyword?: string
-          quality_score?: Json | null
-          schema?: Json | null
-          secondary_keywords?: Json | null
-          seo_title?: string | null
-          serp_analysis?: Json | null
-          slug?: string | null
-          title?: string
-          updated_at?: string | null
-          user_id?: string | null
-          word_count?: number | null
-        }
-        Relationships: []
-      }
+      [_ in never]: never
     }
     Views: {
       [_ in never]: never
