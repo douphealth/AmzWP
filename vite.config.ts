@@ -1,4 +1,5 @@
 import { defineConfig } from 'vite';
+import { cloudflare } from '@cloudflare/vite-plugin';
 import react from '@vitejs/plugin-react';
 import { tanstackStart } from '@tanstack/react-start/plugin/vite';
 import tsConfigPaths from 'vite-tsconfig-paths';
@@ -7,6 +8,9 @@ import { componentTagger } from 'lovable-tagger';
 
 export default defineConfig(({ mode }) => ({
   plugins: [
+    cloudflare({
+      viteEnvironment: { name: 'ssr' },
+    }),
     tanstackStart(),
     react(),
     tsConfigPaths({ projects: ['./tsconfig.json'] }),
