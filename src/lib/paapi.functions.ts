@@ -15,10 +15,11 @@ import { createHash, createHmac } from 'crypto';
 // ────────────────────────────────────────────────────────────────────────────
 const REGION_MAP: Record<string, { host: string; region: string; marketplace: string }> = {
   'us-east-1': { host: 'webservices.amazon.com', region: 'us-east-1', marketplace: 'www.amazon.com' },
-  'us-west-2': { host: 'webservices.amazon.com', region: 'us-east-1', marketplace: 'www.amazon.com' },
   'eu-west-1': { host: 'webservices.amazon.co.uk', region: 'eu-west-1', marketplace: 'www.amazon.co.uk' },
-  'eu-central-1': { host: 'webservices.amazon.de', region: 'eu-west-1', marketplace: 'www.amazon.de' },
+  'eu-west-2': { host: 'webservices.amazon.de', region: 'eu-west-1', marketplace: 'www.amazon.de' },
+  'eu-west-3': { host: 'webservices.amazon.fr', region: 'eu-west-1', marketplace: 'www.amazon.fr' },
   'ap-northeast-1': { host: 'webservices.amazon.co.jp', region: 'us-west-2', marketplace: 'www.amazon.co.jp' },
+  'ap-south-1': { host: 'webservices.amazon.in', region: 'eu-west-1', marketplace: 'www.amazon.in' },
   'ap-southeast-1': { host: 'webservices.amazon.sg', region: 'us-west-2', marketplace: 'www.amazon.sg' },
   'ap-southeast-2': { host: 'webservices.amazon.com.au', region: 'us-west-2', marketplace: 'www.amazon.com.au' },
 };

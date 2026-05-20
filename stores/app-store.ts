@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { AppConfig, AppStep, BlogPost, SitemapState } from '../types';
 import { AppConfigSchema, SitemapStateSchema } from '../schemas';
+import { SecureStorage } from '../utils';
 
 const noopStorage = {
   getItem: () => null,
@@ -27,6 +28,43 @@ const DEFAULT_CONFIG: AppConfig = {
   aiModel: 'gemini-2.0-flash',
   serpApiCallBudget: 8,
   serpApiMinCandidateScore: 35,
+};
+
+const SENSITIVE_CONFIG_FIELDS: (keyof AppConfig)[] = [
+  'amazonAccessKey',
+  'amazonSecretKey',
+  'wpAppPassword',
+  'serpApiKey',
+  'geminiApiKey',
+  'openaiApiKey',
+  'anthropicApiKey',
+  'groqApiKey',
+  'openrouterApiKey',
+];
+
+const decryptPersistedConfig = (config: Partial<AppConfig> | undefined): Partial<AppConfig> => {
+  if (!config || typeof config !== 'object') return {};
+  const next: Partial<AppConfig> = { ...config };
+  for (const field of SENSITIVE_CONFIG_FIELDS) {
+    const raw = next[field] as string | undefined;
+    if (typeof raw !== 'string' || !raw) continue;
+    try {
+      (next as Record<string, unknown>)[field] = SecureStorage.decryptSync(raw);
+    } catch {
+      (next as Record<string, unknown>)[field] = raw;
+    }
+  }
+  return next;
+};
+
+const encryptPersistedConfig = (config: AppConfig): AppConfig => {
+  const next: AppConfig = { ...config };
+  for (const field of SENSITIVE_CONFIG_FIELDS) {
+    const raw = next[field];
+    if (typeof raw !== 'string' || !raw) continue;
+    (next as unknown as Record<string, unknown>)[field] = SecureStorage.encryptSync(raw);
+  }
+  return next;
 };
 
 interface AppState {
@@ -66,7 +104,7 @@ export const useAppStore = create<AppState>()(
       ),
       partialize: (state) => ({
         hasEntered: state.hasEntered,
-        config: state.config,
+        config: encryptPersistedConfig(state.config),
         sitemap: state.sitemap,
       }),
       // Validate persisted payloads — corrupted/tampered localStorage values
@@ -74,8 +112,9 @@ export const useAppStore = create<AppState>()(
       merge: (persisted, current) => {
         if (!persisted || typeof persisted !== 'object') return current;
         const p = persisted as Partial<AppState>;
+        const normalizedConfig = decryptPersistedConfig(p.config);
         const safeConfig = AppConfigSchema.partial()
-          .safeParse(p.config ?? {});
+          .safeParse(normalizedConfig);
         const safeSitemap = SitemapStateSchema.safeParse(p.sitemap ?? current.sitemap);
         return {
           ...current,

@@ -1,8 +1,14 @@
 import { z } from 'zod';
 
 export const AmazonRegionSchema = z.enum([
-  'us-east-1', 'us-west-2', 'eu-west-1', 'eu-central-1', 
-  'ap-northeast-1', 'ap-southeast-1', 'ap-southeast-2'
+  'us-east-1',
+  'eu-west-1',
+  'eu-west-2',
+  'eu-west-3',
+  'ap-northeast-1',
+  'ap-south-1',
+  'ap-southeast-1',
+  'ap-southeast-2'
 ]);
 
 export const BoxStyleSchema = z.enum(['TACTICAL_LINK', 'ELITE_BENTO', 'PREMIUM', 'MINIMAL']);
@@ -11,18 +17,18 @@ export const AIProviderSchema = z.enum(['gemini', 'openai', 'anthropic', 'groq',
 
 export const AppConfigSchema = z.object({
   // Amazon
-  amazonTag: z.string().regex(/^\w+-\d{2}$/, 'Invalid Amazon tag format (e.g., mytag-20)').default(''),
-  amazonAccessKey: z.string().min(20, 'Access key too short').max(20, 'Access key too long').default(''),
-  amazonSecretKey: z.string().min(40, 'Secret key too short').default(''),
+  amazonTag: z.string().default(''),
+  amazonAccessKey: z.string().default(''),
+  amazonSecretKey: z.string().default(''),
   amazonRegion: AmazonRegionSchema.default('us-east-1'),
   
   // WordPress
-  wpUrl: z.string().url('Must be a valid URL').default(''),
-  wpUser: z.string().min(1, 'Username required').default(''),
-  wpAppPassword: z.string().regex(/^\w{4} \w{4} \w{4} \w{4}$/, 'Invalid app password format').default(''),
+  wpUrl: z.string().default(''),
+  wpUser: z.string().default(''),
+  wpAppPassword: z.string().default(''),
   
   // SerpAPI
-  serpApiKey: z.string().min(32, 'API key too short').default(''),
+  serpApiKey: z.string().default(''),
   serpApiCallBudget: z.number().int().min(1).max(50).default(8),
   serpApiMinCandidateScore: z.number().int().min(0).max(100).default(35),
   

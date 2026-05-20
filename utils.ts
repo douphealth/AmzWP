@@ -53,13 +53,19 @@ import { paapiGetItem, paapiSearchItem } from './src/lib/paapi.functions';
 export function hasPaapiCreds(c: Partial<AppConfig>): boolean {
   return !!(c.amazonAccessKey?.trim() && c.amazonSecretKey?.trim() && c.amazonTag?.trim());
 }
+export function hasPaapiKeysOnly(c: Partial<AppConfig>): boolean {
+  return !!(c.amazonAccessKey?.trim() && c.amazonSecretKey?.trim());
+}
 export function hasSerpApi(c: Partial<AppConfig>): boolean {
   return !!c.serpApiKey?.trim();
 }
 export function hasProductLookup(c: Partial<AppConfig>): boolean {
   return hasSerpApi(c) || hasPaapiCreds(c);
 }
-export function missingProductLookupMessage(): string {
+export function missingProductLookupMessage(config?: Partial<AppConfig>): string {
+  if (config && hasPaapiKeysOnly(config) && !config.amazonTag?.trim()) {
+    return 'Amazon PA-API keys are saved, but the Amazon Associate Tag is missing. Add your Partner Tag in Settings > Amazon.';
+  }
   return 'No Amazon product lookup configured. Add Amazon PA-API credentials (recommended) or a SerpAPI key in Settings > Amazon.';
 }
 
@@ -122,7 +128,7 @@ export async function lookupAsin(
   if (hasSerpApi(config)) {
     return fetchProductByASIN(normalized, config.serpApiKey!, tracker);
   }
-  throw new Error(missingProductLookupMessage());
+  throw new Error(missingProductLookupMessage(config));
 }
 
 /** Provider-aware keyword search. PA-API first when available. */
@@ -166,7 +172,7 @@ export async function lookupAmazonSearch(
   if (hasSerpApi(config)) {
     return searchAmazonProduct(q, config.serpApiKey!, tracker);
   }
-  throw new Error(missingProductLookupMessage());
+  throw new Error(missingProductLookupMessage(config));
 }
 
 // ============================================================================
@@ -2213,7 +2219,7 @@ export const analyzeContentAndFindProduct = async (
 
   // Require at least one Amazon product lookup provider (SerpAPI OR PA-API).
   if (!hasProductLookup(config)) {
-    throw new Error(missingProductLookupMessage());
+    throw new Error(missingProductLookupMessage(config));
   }
 
   // Fast path: use the strongest phase-1 signals first, but stay within a strict lookup budget.
