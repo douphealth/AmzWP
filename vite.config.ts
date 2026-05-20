@@ -1,3 +1,4 @@
+import { cloudflare } from '@cloudflare/vite-plugin';
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import { tanstackStart } from '@tanstack/react-start/plugin/vite';
@@ -7,7 +8,12 @@ import { componentTagger } from 'lovable-tagger';
 
 export default defineConfig(({ mode }) => ({
   plugins: [
-    tanstackStart(),
+    cloudflare({ viteEnvironment: { name: 'ssr' } }),
+    tanstackStart({
+      server: {
+        entry: './src/server.ts',
+      },
+    }),
     react(),
     tsConfigPaths({ projects: ['./tsconfig.json'] }),
     tailwindcss(),
@@ -24,15 +30,6 @@ export default defineConfig(({ mode }) => ({
         rollupOptions: {
           output: {
             inlineDynamicImports: true,
-          },
-        },
-      },
-      ssr: {
-        build: {
-          rollupOptions: {
-            output: {
-              inlineDynamicImports: true,
-            },
           },
         },
       },

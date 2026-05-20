@@ -1,14 +1,16 @@
 import { createFileRoute } from '@tanstack/react-router';
 
-export const Route = createFileRoute('/api/health')({
+export const Route = createFileRoute('/api/public/health')({
   server: {
     handlers: {
-      GET: async () => {
+      GET: async ({ request }) => {
+        const url = new URL(request.url);
+
         return Response.json({
           status: 'ok',
           ssr: true,
           timestamp: new Date().toISOString(),
-          runtime: typeof navigator !== 'undefined' ? navigator.userAgent : 'server',
+          path: url.pathname,
         });
       },
     },
