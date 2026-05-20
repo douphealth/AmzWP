@@ -183,6 +183,41 @@ const encryptConfigAsync = async (config: AppConfig): Promise<AppConfig> => {
 };
 
 // ============================================================================
+// PRESETS — save / load multiple named configurations
+// ============================================================================
+
+const PRESETS_KEY = 'amzwp_config_presets_v1';
+
+interface ConfigPreset {
+  id: string;
+  name: string;
+  createdAt: number;
+  updatedAt: number;
+  config: AppConfig; // stored with sensitive fields ALREADY encrypted
+}
+
+const loadPresets = (): ConfigPreset[] => {
+  if (typeof window === 'undefined') return [];
+  try {
+    const raw = window.localStorage.getItem(PRESETS_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+};
+
+const savePresets = (presets: ConfigPreset[]) => {
+  if (typeof window === 'undefined') return;
+  try {
+    window.localStorage.setItem(PRESETS_KEY, JSON.stringify(presets));
+  } catch {
+    /* quota / disabled — non-fatal */
+  }
+};
+
+// ============================================================================
 // VALIDATION
 // ============================================================================
 
@@ -428,6 +463,88 @@ export const ConfigPanel: React.FC<ConfigPanelProps> = ({ onSave, initialConfig 
     setConfig(decryptConfig(initialConfig));
   }, [initialConfig]);
 
+  // ---------- Presets ----------
+  const [presets, setPresets] = useState<ConfigPreset[]>(() => loadPresets());
+  const [activePresetId, setActivePresetId] = useState<string | null>(() => {
+    if (typeof window === 'undefined') return null;
+    return window.localStorage.getItem('amzwp_active_preset_id');
+  });
+  const [showSaveAs, setShowSaveAs] = useState(false);
+  const [presetName, setPresetName] = useState('');
+
+  const persistPresets = useCallback((next: ConfigPreset[]) => {
+    setPresets(next);
+    savePresets(next);
+  }, []);
+
+  const handleSaveAsPreset = useCallback(async () => {
+    const name = presetName.trim();
+    if (!name) {
+      toast.error('Give your configuration a name');
+      return;
+    }
+    try {
+      const normalized = sanitizeAppConfig(config);
+      const encrypted = await encryptConfigAsync(normalized);
+      const now = Date.now();
+      const id = `preset_${now}_${Math.random().toString(36).slice(2, 8)}`;
+      const newPreset: ConfigPreset = { id, name, createdAt: now, updatedAt: now, config: encrypted };
+      const next = [...presets, newPreset];
+      persistPresets(next);
+      setActivePresetId(id);
+      try { window.localStorage.setItem('amzwp_active_preset_id', id); } catch { /* noop */ }
+      setShowSaveAs(false);
+      setPresetName('');
+      toast.success(`✓ Saved "${name}"`);
+    } catch {
+      toast.error('Failed to save preset');
+    }
+  }, [config, presetName, presets, persistPresets]);
+
+  const handleUpdateCurrentPreset = useCallback(async () => {
+    if (!activePresetId) return;
+    try {
+      const normalized = sanitizeAppConfig(config);
+      const encrypted = await encryptConfigAsync(normalized);
+      const next = presets.map(p =>
+        p.id === activePresetId ? { ...p, config: encrypted, updatedAt: Date.now() } : p
+      );
+      persistPresets(next);
+      const target = next.find(p => p.id === activePresetId);
+      toast.success(`✓ Updated "${target?.name ?? 'preset'}"`);
+    } catch {
+      toast.error('Failed to update preset');
+    }
+  }, [activePresetId, config, persistPresets, presets]);
+
+  const handleLoadPreset = useCallback((id: string) => {
+    const preset = presets.find(p => p.id === id);
+    if (!preset) return;
+    setConfig(decryptConfig(preset.config));
+    setActivePresetId(id);
+    try { window.localStorage.setItem('amzwp_active_preset_id', id); } catch { /* noop */ }
+    setValidationErrors({});
+    toast.success(`Loaded "${preset.name}"`);
+  }, [presets]);
+
+  const handleDeletePreset = useCallback((id: string) => {
+    const target = presets.find(p => p.id === id);
+    if (!target) return;
+    if (!window.confirm(`Delete preset "${target.name}"?`)) return;
+    const next = presets.filter(p => p.id !== id);
+    persistPresets(next);
+    if (activePresetId === id) {
+      setActivePresetId(null);
+      try { window.localStorage.removeItem('amzwp_active_preset_id'); } catch { /* noop */ }
+    }
+    toast.success('Preset deleted');
+  }, [presets, activePresetId, persistPresets]);
+
+  const activePreset = useMemo(
+    () => presets.find(p => p.id === activePresetId) ?? null,
+    [presets, activePresetId]
+  );
+
   // ========== MEMOIZED VALUES ==========
   const currentProvider = useMemo(
     () => AI_PROVIDERS.find(p => p.id === config.aiProvider),
@@ -644,14 +761,53 @@ export const ConfigPanel: React.FC<ConfigPanelProps> = ({ onSave, initialConfig 
         helpText="Your Amazon Associates tracking ID"
       />
 
+      {/* PA-API credentials — premium accuracy mode */}
+      <div className="p-5 bg-gradient-to-br from-amber-500/5 to-orange-500/5 border border-amber-500/20 rounded-2xl space-y-4">
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center">
+            <i className="fa-solid fa-shield-halved text-white text-sm" />
+          </div>
+          <div>
+            <h4 className="text-sm font-bold text-white">Amazon PA-API Credentials</h4>
+            <p className="text-[10px] text-amber-300/80">Premium accuracy — official product data, live pricing &amp; Prime status</p>
+          </div>
+          {(config.amazonAccessKey && config.amazonSecretKey) && (
+            <span className="ml-auto text-[9px] font-black uppercase tracking-widest bg-green-500/20 text-green-300 border border-green-500/30 px-2 py-1 rounded-full">
+              <i className="fa-solid fa-check mr-1" />Active
+            </span>
+          )}
+        </div>
+        <InputField
+          label="Amazon Access Key ID"
+          type="password"
+          value={config.amazonAccessKey || ''}
+          onChange={v => updateConfig('amazonAccessKey', v)}
+          placeholder="AKIAxxxxxxxxxxxxxxxx"
+          icon="fa-id-card"
+          helpText="20-character access key from Amazon Associates → Product Advertising API"
+        />
+        <InputField
+          label="Amazon Secret Access Key"
+          type="password"
+          value={config.amazonSecretKey || ''}
+          onChange={v => updateConfig('amazonSecretKey', v)}
+          placeholder="40-character secret"
+          icon="fa-key"
+          helpText="Encrypted with AES-GCM in this browser only"
+        />
+        <InfoBox type="success" icon="fa-bolt">
+          With PA-API keys filled in, the engine pulls authoritative product data — titles, prices, images, ratings &amp; Prime eligibility — directly from Amazon.
+        </InfoBox>
+      </div>
+
       <InputField
         label="SerpApi Key"
         type="password"
         value={config.serpApiKey || ''}
         onChange={v => updateConfig('serpApiKey', v)}
-        placeholder="Enter SerpApi Key (optional)"
+        placeholder="SerpApi key (fallback enrichment)"
         icon="fa-search"
-        helpText="Optional: For enhanced product data lookup"
+        helpText="Used when PA-API is unavailable, or for candidate search enrichment"
       />
 
       <div className="grid grid-cols-2 gap-4">
@@ -674,11 +830,6 @@ export const ConfigPanel: React.FC<ConfigPanelProps> = ({ onSave, initialConfig 
           helpText="Higher = fewer, more selective product lookups"
         />
       </div>
-
-      <InfoBox type="warning" icon="fa-triangle-exclamation">
-        SerpApi key enables accurate product images and real-time pricing. 
-        Get one at <a href="https://serpapi.com" target="_blank" rel="noopener noreferrer" className="underline hover:text-amber-300">serpapi.com</a>
-      </InfoBox>
 
       <div className="p-4 bg-dark-950 border border-dark-700 rounded-2xl">
         <div className="flex items-center gap-3 mb-3">
@@ -928,12 +1079,15 @@ export const ConfigPanel: React.FC<ConfigPanelProps> = ({ onSave, initialConfig 
             
             {/* Header */}
             <div className="flex justify-between items-center p-6 md:p-8 border-b border-dark-800 bg-dark-950/50">
-              <div>
+              <div className="min-w-0 flex-1">
                 <h2 className="text-2xl md:text-3xl font-black text-white tracking-tighter">
                   System Configuration
                 </h2>
                 <p className="text-xs text-gray-500 mt-1">
                   {completionPercentage}% configured
+                  {activePreset && (
+                    <> · <span className="text-brand-400 font-bold">{activePreset.name}</span></>
+                  )}
                 </p>
               </div>
               <button
@@ -942,6 +1096,95 @@ export const ConfigPanel: React.FC<ConfigPanelProps> = ({ onSave, initialConfig 
               >
                 <i className="fa-solid fa-times text-lg" />
               </button>
+            </div>
+
+            {/* Presets bar — save / load multiple named configurations */}
+            <div className="px-6 md:px-8 py-4 border-b border-dark-800 bg-dark-950/30">
+              <div className="flex items-center gap-3 flex-wrap">
+                <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-brand-400">
+                  <i className="fa-solid fa-layer-group" />
+                  Configurations
+                </div>
+
+                <div className="flex-1 min-w-[180px]">
+                  <select
+                    value={activePresetId ?? ''}
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      if (v) handleLoadPreset(v);
+                    }}
+                    className="w-full bg-dark-900 border border-dark-700 rounded-xl px-3 py-2 text-white text-xs outline-none focus:border-brand-500 cursor-pointer"
+                  >
+                    <option value="">
+                      {presets.length === 0 ? '— No saved configurations yet —' : 'Load a saved configuration…'}
+                    </option>
+                    {presets.map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {activePreset && (
+                  <>
+                    <button
+                      type="button"
+                      onClick={handleUpdateCurrentPreset}
+                      className="px-3 py-2 rounded-xl bg-dark-800 hover:bg-dark-700 text-brand-300 text-[10px] font-black uppercase tracking-widest border border-dark-700 hover:border-brand-500/40 transition-all flex items-center gap-1.5"
+                      title="Overwrite this preset with current values"
+                    >
+                      <i className="fa-solid fa-rotate" /> Update
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleDeletePreset(activePreset.id)}
+                      className="px-3 py-2 rounded-xl bg-dark-800 hover:bg-red-500/20 text-gray-400 hover:text-red-400 text-[10px] font-black uppercase tracking-widest border border-dark-700 hover:border-red-500/40 transition-all flex items-center gap-1.5"
+                    >
+                      <i className="fa-solid fa-trash" />
+                    </button>
+                  </>
+                )}
+
+                <button
+                  type="button"
+                  onClick={() => setShowSaveAs((s) => !s)}
+                  className="px-3 py-2 rounded-xl bg-gradient-to-r from-brand-600 to-purple-600 text-white text-[10px] font-black uppercase tracking-widest shadow-lg hover:from-brand-500 hover:to-purple-500 transition-all flex items-center gap-1.5"
+                >
+                  <i className="fa-solid fa-plus" /> Save as
+                </button>
+              </div>
+
+              {showSaveAs && (
+                <div className="mt-3 flex items-center gap-2 animate-fade-in">
+                  <input
+                    type="text"
+                    autoFocus
+                    value={presetName}
+                    onChange={(e) => setPresetName(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') { e.preventDefault(); void handleSaveAsPreset(); }
+                      if (e.key === 'Escape') { setShowSaveAs(false); setPresetName(''); }
+                    }}
+                    placeholder="e.g. Tech Blog · US · Gemini"
+                    className="flex-1 bg-dark-900 border border-dark-700 rounded-xl px-3 py-2 text-white text-xs outline-none focus:border-brand-500"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => void handleSaveAsPreset()}
+                    className="px-4 py-2 rounded-xl bg-brand-500 hover:bg-brand-400 text-white text-[10px] font-black uppercase tracking-widest transition-all"
+                  >
+                    Save
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setShowSaveAs(false); setPresetName(''); }}
+                    className="px-3 py-2 rounded-xl bg-dark-800 hover:bg-dark-700 text-gray-400 text-[10px] font-black uppercase tracking-widest transition-all"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              )}
             </div>
 
             {/* Progress Bar */}
