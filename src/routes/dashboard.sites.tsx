@@ -36,10 +36,11 @@ function SitesPage() {
   const [name, setName] = useState('');
   const [url, setUrl] = useState('');
   const [busy, setBusy] = useState(false);
+  const db = supabase as any;
 
   const load = async () => {
     setLoading(true);
-    const { data, error } = await supabase
+    const { data, error } = await db
       .from('sites')
       .select('*')
       .order('created_at', { ascending: false });
@@ -75,7 +76,7 @@ function SitesPage() {
       setBusy(false);
       return;
     }
-    const { error } = await supabase
+    const { error } = await db
       .from('sites')
       .insert({ name: name.trim(), url: normalized, user_id: userId });
     setBusy(false);
@@ -91,7 +92,7 @@ function SitesPage() {
 
   const onDelete = async (id: string) => {
     if (!confirm('Delete this site?')) return;
-    const { error } = await supabase.from('sites').delete().eq('id', id);
+    const { error } = await db.from('sites').delete().eq('id', id);
     if (error) {
       toast.error(error.message);
       return;
