@@ -1098,6 +1098,95 @@ export const ConfigPanel: React.FC<ConfigPanelProps> = ({ onSave, initialConfig 
               </button>
             </div>
 
+            {/* Presets bar — save / load multiple named configurations */}
+            <div className="px-6 md:px-8 py-4 border-b border-dark-800 bg-dark-950/30">
+              <div className="flex items-center gap-3 flex-wrap">
+                <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-brand-400">
+                  <i className="fa-solid fa-layer-group" />
+                  Configurations
+                </div>
+
+                <div className="flex-1 min-w-[180px]">
+                  <select
+                    value={activePresetId ?? ''}
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      if (v) handleLoadPreset(v);
+                    }}
+                    className="w-full bg-dark-900 border border-dark-700 rounded-xl px-3 py-2 text-white text-xs outline-none focus:border-brand-500 cursor-pointer"
+                  >
+                    <option value="">
+                      {presets.length === 0 ? '— No saved configurations yet —' : 'Load a saved configuration…'}
+                    </option>
+                    {presets.map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {activePreset && (
+                  <>
+                    <button
+                      type="button"
+                      onClick={handleUpdateCurrentPreset}
+                      className="px-3 py-2 rounded-xl bg-dark-800 hover:bg-dark-700 text-brand-300 text-[10px] font-black uppercase tracking-widest border border-dark-700 hover:border-brand-500/40 transition-all flex items-center gap-1.5"
+                      title="Overwrite this preset with current values"
+                    >
+                      <i className="fa-solid fa-rotate" /> Update
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleDeletePreset(activePreset.id)}
+                      className="px-3 py-2 rounded-xl bg-dark-800 hover:bg-red-500/20 text-gray-400 hover:text-red-400 text-[10px] font-black uppercase tracking-widest border border-dark-700 hover:border-red-500/40 transition-all flex items-center gap-1.5"
+                    >
+                      <i className="fa-solid fa-trash" />
+                    </button>
+                  </>
+                )}
+
+                <button
+                  type="button"
+                  onClick={() => setShowSaveAs((s) => !s)}
+                  className="px-3 py-2 rounded-xl bg-gradient-to-r from-brand-600 to-purple-600 text-white text-[10px] font-black uppercase tracking-widest shadow-lg hover:from-brand-500 hover:to-purple-500 transition-all flex items-center gap-1.5"
+                >
+                  <i className="fa-solid fa-plus" /> Save as
+                </button>
+              </div>
+
+              {showSaveAs && (
+                <div className="mt-3 flex items-center gap-2 animate-fade-in">
+                  <input
+                    type="text"
+                    autoFocus
+                    value={presetName}
+                    onChange={(e) => setPresetName(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') { e.preventDefault(); void handleSaveAsPreset(); }
+                      if (e.key === 'Escape') { setShowSaveAs(false); setPresetName(''); }
+                    }}
+                    placeholder="e.g. Tech Blog · US · Gemini"
+                    className="flex-1 bg-dark-900 border border-dark-700 rounded-xl px-3 py-2 text-white text-xs outline-none focus:border-brand-500"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => void handleSaveAsPreset()}
+                    className="px-4 py-2 rounded-xl bg-brand-500 hover:bg-brand-400 text-white text-[10px] font-black uppercase tracking-widest transition-all"
+                  >
+                    Save
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setShowSaveAs(false); setPresetName(''); }}
+                    className="px-3 py-2 rounded-xl bg-dark-800 hover:bg-dark-700 text-gray-400 text-[10px] font-black uppercase tracking-widest transition-all"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              )}
+            </div>
+
             {/* Progress Bar */}
             <div className="h-1 bg-dark-800">
               <div 
