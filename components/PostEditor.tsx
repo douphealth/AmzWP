@@ -1320,6 +1320,7 @@ export const PostEditor: React.FC<PostEditorProps> = ({ post, config, onBack }) 
       className="prose prose-xl prose-slate max-w-none focus:outline-none focus:ring-2 focus:ring-brand-100 rounded-xl p-2 transition-all"
       contentEditable
       suppressContentEditableWarning
+      onPaste={(e) => handleEditableBlockPaste(e, index)}
       onBlur={(e) => updateHtmlNode(node.id, sanitizeHtml(e.currentTarget.innerHTML))}
       dangerouslySetInnerHTML={{ __html: sanitizeHtml(node.content || '') }}
     />
@@ -1398,54 +1399,45 @@ export const PostEditor: React.FC<PostEditorProps> = ({ post, config, onBack }) 
                         <div className="absolute -bottom-3 inset-x-0 h-1.5 bg-indigo-500 rounded-full z-30 animate-pulse" />
                       )}
 
-                      {/* ---- INJECTION POINT ---- */}
-                      <div className="h-8 flex items-center justify-center opacity-0 group-hover/node:opacity-100 transition-all z-20">
-                        <div className="relative group/add">
-                          <button className="w-8 h-8 rounded-full bg-brand-50 text-brand-500 border border-brand-200 flex items-center justify-center shadow-sm hover:scale-110 transition-transform">
-                            <i className="fa-solid fa-plus text-[10px]" />
-                          </button>
-
-                          {/* Mini Injection Menu */}
-                          <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 bg-white border border-slate-100 shadow-2xl rounded-xl p-2 flex flex-col gap-1 w-64 opacity-0 group-hover/add:opacity-100 pointer-events-none group-hover/add:pointer-events-auto transition-all transform origin-top scale-95 group-hover/add:scale-100 z-50 max-h-64 overflow-y-auto custom-scrollbar">
-                            <div className="text-[9px] font-black uppercase text-slate-300 px-3 py-1">Insert Node</div>
-                            <button
-                              onClick={() => {
-                                const next = [...editorNodes];
-                                next.splice(index + 1, 0, { id: `html-${Date.now()}`, type: 'HTML', content: '<p>Write something brilliant…</p>' });
-                                setEditorNodes(next);
-                              }}
-                              className="text-left px-3 py-2 text-xs font-bold text-slate-600 hover:bg-slate-50 rounded-lg transition-colors"
-                            >
-                              Text Block
-                            </button>
-
-                            <div className="h-px bg-slate-100 my-1" />
-                            <div className="text-[9px] font-black uppercase text-brand-300 px-3 py-1">Relevant Assets</div>
-
-                            {(() => {
-                              const ctx = getContextualProducts(index);
-                              if (ctx.length === 0) {
-                                return (
-                                  <div className="px-3 py-2 text-[10px] text-slate-400 italic">No assets available</div>
-                                );
-                              }
-                              return ctx.map((p) => (
-                                <button
-                                  key={p.id}
-                                  onClick={() => injectProduct(p.id, index + 1)}
-                                  className="text-left px-3 py-2 text-xs font-bold text-brand-600 hover:bg-brand-50 rounded-lg transition-colors truncate w-full flex items-center gap-2"
-                                >
-                                  <span className="w-1.5 h-1.5 rounded-full bg-brand-400 flex-shrink-0" />
-                                  {p.title}
-                                </button>
-                              ));
-                            })()}
-                          </div>
-                        </div>
-                      </div>
+                      {/* ---- ALWAYS-VISIBLE INLINE INSERTER ---- */}
+                      <BlockInserter
+                        contextualProducts={getContextualProducts(index)}
+                        onInsertText={() => {
+                          const next = [...editorNodes];
+                          next.splice(index + 1, 0, {
+                            id: `html-${Date.now()}`,
+                            type: 'HTML',
+                            content: '<p>Write something brilliant…</p>',
+                          });
+                          setEditorNodes(next);
+                        }}
+                        onInsertProduct={(productId) => injectProduct(productId, index + 1)}
+                        onInsertByAsin={(input) => addProductByAsinOrUrl(input, index + 1).then(() => undefined)}
+                        hasComparison={editorNodes.some((n) => n.type === 'COMPARISON')}
+                        onInsertComparison={() => {
+                          const productsArr = Object.values(productMap);
+                          if (productsArr.length < 2) {
+                            toast('Need at least 2 staged products to build a comparison table.');
+                            return;
+                          }
+                          const next = [...editorNodes];
+                          next.splice(index + 1, 0, {
+                            id: `comp-table-${Date.now()}`,
+                            type: 'COMPARISON',
+                            comparisonData: {
+                              title: 'Compare top picks',
+                              productIds: productsArr.slice(0, 4).map((p) => p.id),
+                              specs: ['price', 'rating', 'brand'],
+                            },
+                          });
+                          setEditorNodes(next);
+                          toast('Comparison table inserted');
+                        }}
+                      />
                     </div>
                   );
                 })}
+
 
                 {/* Empty State */}
                 {editorNodes.length === 0 && (
