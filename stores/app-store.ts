@@ -57,6 +57,16 @@ const decryptPersistedConfig = (config: Partial<AppConfig> | undefined): Partial
   return next;
 };
 
+const encryptPersistedConfig = (config: AppConfig): AppConfig => {
+  const next: AppConfig = { ...config };
+  for (const field of SENSITIVE_CONFIG_FIELDS) {
+    const raw = next[field];
+    if (typeof raw !== 'string' || !raw) continue;
+    (next as Record<string, unknown>)[field] = SecureStorage.encryptSync(raw);
+  }
+  return next;
+};
+
 interface AppState {
   hasEntered: boolean;
   config: AppConfig;
@@ -94,7 +104,7 @@ export const useAppStore = create<AppState>()(
       ),
       partialize: (state) => ({
         hasEntered: state.hasEntered,
-        config: state.config,
+        config: encryptPersistedConfig(state.config),
         sitemap: state.sitemap,
       }),
       // Validate persisted payloads — corrupted/tampered localStorage values
