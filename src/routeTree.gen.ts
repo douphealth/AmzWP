@@ -16,6 +16,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as DashboardIndexRouteImport } from './routes/dashboard.index'
 import { Route as DashboardSitesRouteImport } from './routes/dashboard.sites'
 import { Route as DashboardGeneratorRouteImport } from './routes/dashboard.generator'
+import { Route as ApiHealthRouteImport } from './routes/api/health'
 
 const SignupRoute = SignupRouteImport.update({
   id: '/signup',
@@ -52,12 +53,18 @@ const DashboardGeneratorRoute = DashboardGeneratorRouteImport.update({
   path: '/generator',
   getParentRoute: () => DashboardRoute,
 } as any)
+const ApiHealthRoute = ApiHealthRouteImport.update({
+  id: '/api/health',
+  path: '/api/health',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/dashboard': typeof DashboardRouteWithChildren
   '/login': typeof LoginRoute
   '/signup': typeof SignupRoute
+  '/api/health': typeof ApiHealthRoute
   '/dashboard/generator': typeof DashboardGeneratorRoute
   '/dashboard/sites': typeof DashboardSitesRoute
   '/dashboard/': typeof DashboardIndexRoute
@@ -66,6 +73,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
   '/signup': typeof SignupRoute
+  '/api/health': typeof ApiHealthRoute
   '/dashboard/generator': typeof DashboardGeneratorRoute
   '/dashboard/sites': typeof DashboardSitesRoute
   '/dashboard': typeof DashboardIndexRoute
@@ -76,6 +84,7 @@ export interface FileRoutesById {
   '/dashboard': typeof DashboardRouteWithChildren
   '/login': typeof LoginRoute
   '/signup': typeof SignupRoute
+  '/api/health': typeof ApiHealthRoute
   '/dashboard/generator': typeof DashboardGeneratorRoute
   '/dashboard/sites': typeof DashboardSitesRoute
   '/dashboard/': typeof DashboardIndexRoute
@@ -87,6 +96,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/login'
     | '/signup'
+    | '/api/health'
     | '/dashboard/generator'
     | '/dashboard/sites'
     | '/dashboard/'
@@ -95,6 +105,7 @@ export interface FileRouteTypes {
     | '/'
     | '/login'
     | '/signup'
+    | '/api/health'
     | '/dashboard/generator'
     | '/dashboard/sites'
     | '/dashboard'
@@ -104,6 +115,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/login'
     | '/signup'
+    | '/api/health'
     | '/dashboard/generator'
     | '/dashboard/sites'
     | '/dashboard/'
@@ -114,6 +126,7 @@ export interface RootRouteChildren {
   DashboardRoute: typeof DashboardRouteWithChildren
   LoginRoute: typeof LoginRoute
   SignupRoute: typeof SignupRoute
+  ApiHealthRoute: typeof ApiHealthRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -167,6 +180,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardGeneratorRouteImport
       parentRoute: typeof DashboardRoute
     }
+    '/api/health': {
+      id: '/api/health'
+      path: '/api/health'
+      fullPath: '/api/health'
+      preLoaderRoute: typeof ApiHealthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -191,6 +211,7 @@ const rootRouteChildren: RootRouteChildren = {
   DashboardRoute: DashboardRouteWithChildren,
   LoginRoute: LoginRoute,
   SignupRoute: SignupRoute,
+  ApiHealthRoute: ApiHealthRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
