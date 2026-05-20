@@ -62,7 +62,7 @@ const encryptPersistedConfig = (config: AppConfig): AppConfig => {
   for (const field of SENSITIVE_CONFIG_FIELDS) {
     const raw = next[field];
     if (typeof raw !== 'string' || !raw) continue;
-    (next as Record<string, unknown>)[field] = SecureStorage.encryptSync(raw);
+    (next as unknown as Record<string, unknown>)[field] = SecureStorage.encryptSync(raw);
   }
   return next;
 };
