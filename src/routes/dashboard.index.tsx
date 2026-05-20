@@ -4,19 +4,14 @@ import { supabase } from '../integrations/supabase/client';
 
 export const Route = createFileRoute('/dashboard/')({
   head: () => ({
-    meta: [{ title: 'Dashboard — AmzWP Automator' }],
+    meta: [{ title: 'Overview — AmzWP Studio' }],
   }),
   component: DashboardHome,
   errorComponent: ({ error, reset }) => (
-    <div className="bg-dark-900 border border-red-500/30 rounded-2xl p-8 text-center">
-      <h2 className="text-xl font-black mb-2">Couldn't load overview</h2>
-      <p className="text-gray-400 text-sm mb-5">{error.message}</p>
-      <button
-        onClick={reset}
-        className="bg-white text-dark-950 px-5 py-2.5 rounded-xl font-bold hover:bg-brand-400 hover:text-white transition"
-      >
-        Retry
-      </button>
+    <div className="card-edit p-8 text-center max-w-lg mx-auto mt-10">
+      <h2 className="font-display text-xl font-bold mb-2">Couldn't load overview</h2>
+      <p className="text-ink-3 text-sm mb-5">{error.message}</p>
+      <button onClick={reset} className="btn-primary">Retry</button>
     </div>
   ),
 });
@@ -40,227 +35,163 @@ function DashboardHome() {
       });
       setLoading(false);
     })();
-    return () => {
-      cancelled = true;
-    };
+    return () => { cancelled = true; };
   }, []);
 
   const onboardingComplete = stats.sites > 0 && stats.posts > 0;
 
   return (
-    <div className="space-y-10">
-      {/* Hero header */}
-      <div className="relative overflow-hidden rounded-3xl border border-dark-800 bg-gradient-to-br from-dark-900 via-dark-900 to-brand-950/30 p-8">
-        <div className="absolute -top-20 -right-20 w-80 h-80 bg-brand-500/15 rounded-full blur-3xl pointer-events-none" />
-        <div className="relative">
-          <span className="text-xs uppercase tracking-[0.3em] text-brand-300 font-bold">
-            Welcome back
-          </span>
-          <h1 className="text-3xl md:text-4xl font-black mt-2 mb-2">Your automation overview.</h1>
-          <p className="text-gray-400 max-w-xl">
-            Connect WordPress sites, run scans, and let AmzWP keep your affiliate content fresh.
+    <div className="px-5 md:px-10 py-8 md:py-12 max-w-6xl mx-auto space-y-10 animate-fade-in-up">
+      {/* Hero */}
+      <section className="relative overflow-hidden rounded-3xl border border-rule bg-white">
+        <div className="absolute inset-0 bg-dotted opacity-60 pointer-events-none" />
+        <div className="absolute -top-24 -right-16 w-96 h-96 bg-accent/10 rounded-full blur-3xl pointer-events-none" />
+        <div className="relative px-7 md:px-12 py-10 md:py-14">
+          <div className="eyebrow text-accent-2 mb-3">Welcome back</div>
+          <h1 className="font-display text-3xl md:text-5xl font-bold tracking-tight text-ink leading-[1.05]">
+            Your affiliate studio,<br/>
+            <span className="gradient-text">precision-engineered.</span>
+          </h1>
+          <p className="mt-4 max-w-xl text-ink-3 text-[15px] leading-relaxed">
+            Connect WordPress sites, scan for monetization gaps, and ship pixel-perfect Amazon
+            product boxes — anywhere in any post, in a single click.
           </p>
+          <div className="mt-7 flex flex-wrap items-center gap-3">
+            <Link to="/dashboard/generator" className="btn-accent">
+              Open generator
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+            </Link>
+            <Link to="/dashboard/sites" className="btn-ghost">Manage sites</Link>
+            <div className="ml-auto hidden md:flex items-center gap-2 text-xs text-ink-4">
+              <span className="kbd">⌘</span><span className="kbd">K</span>
+              <span>quick actions</span>
+            </div>
+          </div>
         </div>
-      </div>
+      </section>
 
       {/* Stats */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <StatCard
-          label="WordPress sites"
-          value={stats.sites}
-          loading={loading}
-          icon="M3 7h18M3 12h18M3 17h18"
-          accent="from-brand-400 to-brand-600"
-        />
-        <StatCard
-          label="Generated posts"
-          value={stats.posts}
-          loading={loading}
-          icon="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-          accent="from-violet-400 to-violet-600"
-        />
-        <StatCard
-          label="Auto-refreshes"
-          value={0}
-          loading={loading}
-          hint="Pro feature · soon"
-          icon="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-          accent="from-emerald-400 to-emerald-600"
-          muted
-        />
-      </div>
+      <section className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <StatCard label="WordPress sites" value={stats.sites} loading={loading} accent="bg-accent" icon={<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 010 18"/></svg>} />
+        <StatCard label="Generated posts" value={stats.posts} loading={loading} accent="bg-ink" icon={<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6M9 13h6M9 17h4"/></svg>} />
+        <StatCard label="Auto-refreshes" value={0} loading={loading} hint="Pro · coming soon" accent="bg-emerald-500" muted icon={<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12a9 9 0 11-3-6.7L21 8"/><path d="M21 3v5h-5"/></svg>} />
+      </section>
 
-      {/* Onboarding checklist */}
+      {/* Onboarding */}
       {!onboardingComplete && (
-        <div className="bg-dark-900 border border-dark-800 rounded-2xl p-6">
-          <div className="flex items-center justify-between mb-5">
+        <section className="card-edit p-6 md:p-8">
+          <div className="flex items-start justify-between gap-4 mb-6">
             <div>
-              <h2 className="text-lg font-bold">Get to your first published post</h2>
-              <p className="text-sm text-gray-500">Two steps. Five minutes.</p>
+              <div className="eyebrow text-ink-4 mb-1">Get set up</div>
+              <h2 className="font-display text-xl md:text-2xl font-bold text-ink">Ship your first published post</h2>
+              <p className="text-sm text-ink-3 mt-1">Two steps. About five minutes.</p>
             </div>
-            <span className="text-xs font-bold text-brand-300 bg-brand-500/10 border border-brand-500/30 px-3 py-1 rounded-full">
+            <div className="text-xs font-bold text-accent-2 bg-accent-soft border border-accent/20 px-3 py-1.5 rounded-full">
               {[stats.sites > 0, stats.posts > 0].filter(Boolean).length} / 2
-            </span>
+            </div>
           </div>
           <div className="space-y-3">
-            <ChecklistItem
-              done={stats.sites > 0}
-              title="Connect a WordPress site"
-              desc="Add the site you want to publish to."
-              href="/dashboard/sites"
-              cta="Add site"
-            />
-            <ChecklistItem
-              done={stats.posts > 0}
-              title="Generate your first post"
-              desc="Open the generator and run your first scan."
-              href="/dashboard/generator"
-              cta="Open generator"
-            />
+            <ChecklistItem done={stats.sites > 0} title="Connect a WordPress site" desc="Add the site you want to publish to." href="/dashboard/sites" cta="Add site" step={1} />
+            <ChecklistItem done={stats.posts > 0} title="Generate your first post" desc="Open the generator and run your first scan." href="/dashboard/generator" cta="Open generator" step={2} />
           </div>
-        </div>
+        </section>
       )}
 
-      {/* Quick actions */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      {/* Actions */}
+      <section className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <ActionCard
           title="Manage WordPress sites"
           desc="Add, remove, or configure the sites you publish to."
           to="/dashboard/sites"
           cta="Manage sites"
-          icon="M3 7h18M3 12h18M3 17h18"
         />
         <ActionCard
           title="Open the generator"
-          desc="Scan a sitemap and generate Amazon-affiliate content."
+          desc="Scan a sitemap and ship Amazon-affiliate content."
           to="/dashboard/generator"
           cta="Open generator"
-          icon="M13 2L3 14h9l-1 8 10-12h-9l1-8z"
+          highlight
         />
-      </div>
+      </section>
+
+      <footer className="pt-6 border-t border-rule text-[11px] text-ink-4 flex items-center justify-between flex-wrap gap-2">
+        <span>AmzWP Studio · v2.0 Editorial</span>
+        <span>Crafted for affiliate publishers</span>
+      </footer>
     </div>
   );
 }
 
-/* -------------------------------------------------------------------------- */
-
 function StatCard({
-  label,
-  value,
-  loading,
-  hint,
-  icon,
-  accent,
-  muted,
-}: {
-  label: string;
-  value: number;
-  loading: boolean;
-  hint?: string;
-  icon: string;
-  accent: string;
-  muted?: boolean;
-}) {
+  label, value, loading, hint, icon, accent, muted,
+}: { label: string; value: number; loading: boolean; hint?: string; icon: JSX.Element; accent: string; muted?: boolean }) {
   return (
-    <div className={`relative overflow-hidden rounded-2xl border p-6 transition ${
-      muted
-        ? 'bg-dark-900/60 border-dark-800'
-        : 'bg-dark-900 border-dark-800 hover:border-dark-700'
-    }`}>
-      <div className="flex items-start justify-between mb-4">
-        <p className="text-xs uppercase tracking-widest text-gray-500 font-bold">{label}</p>
-        <div className={`w-9 h-9 rounded-lg bg-gradient-to-br ${accent} ${muted ? 'opacity-40' : ''} flex items-center justify-center shadow-lg`}>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d={icon} />
-          </svg>
+    <div className={`card-edit p-6 ${muted ? 'opacity-80' : ''}`}>
+      <div className="flex items-start justify-between mb-5">
+        <p className="eyebrow">{label}</p>
+        <div className={`w-9 h-9 rounded-xl ${accent} ${muted ? 'opacity-50' : ''} text-white grid place-items-center shadow-sm`}>
+          {icon}
         </div>
       </div>
       {loading ? (
-        <div className="h-10 w-20 bg-dark-800 rounded-lg animate-pulse" />
+        <div className="h-10 w-24 skeleton" />
       ) : (
-        <p className="text-4xl font-black tracking-tight">{value.toLocaleString()}</p>
+        <p className="font-display text-4xl font-bold tracking-tight text-ink">{value.toLocaleString()}</p>
       )}
-      {hint && <p className="text-xs text-gray-600 mt-2 font-semibold">{hint}</p>}
+      {hint && <p className="text-[11px] text-ink-4 mt-2 font-semibold">{hint}</p>}
     </div>
   );
 }
 
 function ChecklistItem({
-  done,
-  title,
-  desc,
-  href,
-  cta,
-}: {
-  done: boolean;
-  title: string;
-  desc: string;
-  href: '/dashboard/sites' | '/dashboard/generator';
-  cta: string;
-}) {
+  done, title, desc, href, cta, step,
+}: { done: boolean; title: string; desc: string; href: '/dashboard/sites' | '/dashboard/generator'; cta: string; step: number }) {
   return (
     <div className={`flex items-center gap-4 p-4 rounded-xl border transition ${
-      done
-        ? 'bg-emerald-500/5 border-emerald-500/20'
-        : 'bg-dark-950 border-dark-800 hover:border-dark-700'
+      done ? 'bg-emerald-50 border-emerald-200' : 'bg-paper border-rule hover:border-rule-strong'
     }`}>
-      <div className={`w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 ${
-        done
-          ? 'bg-emerald-500 text-white'
-          : 'bg-dark-800 border border-dark-700 text-gray-500'
+      <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 font-bold text-sm ${
+        done ? 'bg-emerald-500 text-white' : 'bg-white border border-rule text-ink-3'
       }`}>
         {done ? (
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"><path d="M5 12l5 5L20 7" /></svg>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"><path d="M5 12l5 5L20 7" /></svg>
         ) : (
-          <span className="w-2 h-2 rounded-full bg-current" />
+          step
         )}
       </div>
       <div className="flex-1 min-w-0">
-        <p className={`font-bold text-sm ${done ? 'text-gray-400 line-through' : 'text-white'}`}>{title}</p>
-        <p className="text-xs text-gray-500">{desc}</p>
+        <p className={`font-bold text-sm ${done ? 'text-ink-3 line-through' : 'text-ink'}`}>{title}</p>
+        <p className="text-xs text-ink-3">{desc}</p>
       </div>
       {!done && (
-        <Link
-          to={href}
-          className="text-xs font-bold bg-white text-dark-950 hover:bg-brand-400 hover:text-white px-3 py-2 rounded-lg transition flex-shrink-0"
-        >
-          {cta}
-        </Link>
+        <Link to={href} className="btn-primary !py-2 !px-4 !text-xs flex-shrink-0">{cta}</Link>
       )}
     </div>
   );
 }
 
 function ActionCard({
-  title,
-  desc,
-  to,
-  cta,
-  icon,
-}: {
-  title: string;
-  desc: string;
-  to: '/dashboard/sites' | '/dashboard/generator';
-  cta: string;
-  icon: string;
-}) {
+  title, desc, to, cta, highlight,
+}: { title: string; desc: string; to: '/dashboard/sites' | '/dashboard/generator'; cta: string; highlight?: boolean }) {
   return (
     <Link
       to={to}
-      className="group relative overflow-hidden bg-dark-900 border border-dark-800 hover:border-brand-500/40 rounded-2xl p-6 flex flex-col transition"
+      className={`group relative overflow-hidden rounded-2xl p-7 border transition ${
+        highlight
+          ? 'bg-ink text-white border-ink hover:shadow-[0_30px_60px_-30px_rgba(15,23,42,.6)]'
+          : 'bg-white border-rule hover:border-rule-strong hover:shadow-[var(--shadow-pop)]'
+      }`}
     >
-      <div className="absolute inset-0 bg-gradient-to-br from-brand-500/0 to-brand-500/5 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
+      {highlight && (
+        <div className="absolute -top-20 -right-10 w-72 h-72 bg-accent/30 rounded-full blur-3xl pointer-events-none" />
+      )}
       <div className="relative">
-        <div className="w-10 h-10 rounded-lg bg-brand-500/10 border border-brand-500/30 flex items-center justify-center mb-4">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d={icon} />
-          </svg>
-        </div>
-        <h3 className="text-lg font-bold mb-1">{title}</h3>
-        <p className="text-gray-400 text-sm mb-5">{desc}</p>
-        <span className="inline-flex items-center gap-1 text-sm font-bold text-brand-400 group-hover:text-brand-300 transition">
+        <div className={`eyebrow mb-3 ${highlight ? 'text-accent' : 'text-ink-4'}`}>{highlight ? 'Primary action' : 'Workspace'}</div>
+        <h3 className={`font-display text-2xl font-bold mb-2 tracking-tight ${highlight ? 'text-white' : 'text-ink'}`}>{title}</h3>
+        <p className={`text-sm mb-6 max-w-md ${highlight ? 'text-white/70' : 'text-ink-3'}`}>{desc}</p>
+        <span className={`inline-flex items-center gap-2 text-sm font-bold ${highlight ? 'text-white' : 'text-accent-2'}`}>
           {cta}
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" className="group-hover:translate-x-0.5 transition-transform">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" className="group-hover:translate-x-1 transition-transform">
             <path d="M5 12h14M12 5l7 7-7 7" />
           </svg>
         </span>
