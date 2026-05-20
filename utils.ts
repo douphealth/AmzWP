@@ -2188,7 +2188,7 @@ export const analyzeContentAndFindProduct = async (
   }
 
   // Fast path: use the strongest phase-1 signals first, but stay within a strict lookup budget.
-  if (phase1Products.length > 0 && config.serpApiKey) {
+  if (phase1Products.length > 0 && hasProductLookup(config)) {
     tracker.startStage('phase1_lookup', 'Verifying high-confidence candidates against Amazon');
     const quickProducts: ProductDetails[] = [];
     // Smart selection: keep only candidates above the score threshold,
@@ -2463,7 +2463,7 @@ export const analyzeContentAndFindProduct = async (
       const batchPromises = batch.map(async ({ key, product, asin }) => {
         let productData: Partial<ProductDetails> = {};
 
-        if (config.serpApiKey) {
+        if (hasProductLookup(config)) {
           try {
             if (asin) {
               const asinResult = await lookupAsin(asin, config);
@@ -2585,7 +2585,7 @@ export const analyzeContentAndFindProduct = async (
       throw error;
     }
 
-    if (phase1Products.length > 0 && config.serpApiKey) {
+    if (phase1Products.length > 0 && hasProductLookup(config)) {
       const fallbackProducts: ProductDetails[] = [];
       let fallbackSerpError: string | null = null;
 
