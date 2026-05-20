@@ -260,12 +260,21 @@ export function detectContentType(content: string): 'review' | 'listicle' | 'com
     /\d+\s+(?:best|top|must-have)/i,
     /(?:^|\n)\s*(?:\d+[\.\)]|[\*\-\•])\s*[A-Z]/gm,
   ];
+  const roundupIndicators = [
+    'top picks',
+    'our picks',
+    'top choices',
+    'best overall',
+    'best budget',
+    'best for',
+    'editor choice',
+  ];
   let listItemCount = 0;
   for (const pattern of listiclePatterns) {
     const matches = content.match(pattern);
     if (matches) listItemCount += matches.length;
   }
-  if (listItemCount >= 5) {
+  if (listItemCount >= 5 || roundupIndicators.some(ind => contentLower.includes(ind))) {
     return 'listicle';
   }
 
