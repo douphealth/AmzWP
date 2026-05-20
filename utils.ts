@@ -2219,7 +2219,7 @@ export const analyzeContentAndFindProduct = async (
 
   // Require at least one Amazon product lookup provider (SerpAPI OR PA-API).
   if (!hasProductLookup(config)) {
-    throw new Error(missingProductLookupMessage());
+    throw new Error(missingProductLookupMessage(config));
   }
 
   // Fast path: use the strongest phase-1 signals first, but stay within a strict lookup budget.
