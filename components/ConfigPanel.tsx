@@ -455,6 +455,88 @@ export const ConfigPanel: React.FC<ConfigPanelProps> = ({ onSave, initialConfig 
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
   const [isSaving, setIsSaving] = useState(false);
 
+  // ---------- Presets ----------
+  const [presets, setPresets] = useState<ConfigPreset[]>(() => loadPresets());
+  const [activePresetId, setActivePresetId] = useState<string | null>(() => {
+    if (typeof window === 'undefined') return null;
+    return window.localStorage.getItem('amzwp_active_preset_id');
+  });
+  const [showSaveAs, setShowSaveAs] = useState(false);
+  const [presetName, setPresetName] = useState('');
+
+  const persistPresets = useCallback((next: ConfigPreset[]) => {
+    setPresets(next);
+    savePresets(next);
+  }, []);
+
+  const handleSaveAsPreset = useCallback(async () => {
+    const name = presetName.trim();
+    if (!name) {
+      toast.error('Give your configuration a name');
+      return;
+    }
+    try {
+      const normalized = sanitizeAppConfig(config);
+      const encrypted = await encryptConfigAsync(normalized);
+      const now = Date.now();
+      const id = `preset_${now}_${Math.random().toString(36).slice(2, 8)}`;
+      const newPreset: ConfigPreset = { id, name, createdAt: now, updatedAt: now, config: encrypted };
+      const next = [...presets, newPreset];
+      persistPresets(next);
+      setActivePresetId(id);
+      try { window.localStorage.setItem('amzwp_active_preset_id', id); } catch { /* noop */ }
+      setShowSaveAs(false);
+      setPresetName('');
+      toast.success(`✓ Saved "${name}"`);
+    } catch {
+      toast.error('Failed to save preset');
+    }
+  }, [config, presetName, presets, persistPresets]);
+
+  const handleUpdateCurrentPreset = useCallback(async () => {
+    if (!activePresetId) return;
+    try {
+      const normalized = sanitizeAppConfig(config);
+      const encrypted = await encryptConfigAsync(normalized);
+      const next = presets.map(p =>
+        p.id === activePresetId ? { ...p, config: encrypted, updatedAt: Date.now() } : p
+      );
+      persistPresets(next);
+      const target = next.find(p => p.id === activePresetId);
+      toast.success(`✓ Updated "${target?.name ?? 'preset'}"`);
+    } catch {
+      toast.error('Failed to update preset');
+    }
+  }, [activePresetId, config, persistPresets, presets]);
+
+  const handleLoadPreset = useCallback((id: string) => {
+    const preset = presets.find(p => p.id === id);
+    if (!preset) return;
+    setConfig(decryptConfig(preset.config));
+    setActivePresetId(id);
+    try { window.localStorage.setItem('amzwp_active_preset_id', id); } catch { /* noop */ }
+    setValidationErrors({});
+    toast.success(`Loaded "${preset.name}"`);
+  }, [presets]);
+
+  const handleDeletePreset = useCallback((id: string) => {
+    const target = presets.find(p => p.id === id);
+    if (!target) return;
+    if (!window.confirm(`Delete preset "${target.name}"?`)) return;
+    const next = presets.filter(p => p.id !== id);
+    persistPresets(next);
+    if (activePresetId === id) {
+      setActivePresetId(null);
+      try { window.localStorage.removeItem('amzwp_active_preset_id'); } catch { /* noop */ }
+    }
+    toast.success('Preset deleted');
+  }, [presets, activePresetId, persistPresets]);
+
+  const activePreset = useMemo(
+    () => presets.find(p => p.id === activePresetId) ?? null,
+    [presets, activePresetId]
+  );
+
   // Decrypt initial config on mount (sync operation)
   const [config, setConfig] = useState<AppConfig>(() => decryptConfig(initialConfig));
 
