@@ -152,7 +152,13 @@ const tryFetchFromApi = async (
   urlPostId: number | null,
   authHeader: string | null,
 ): Promise<FetchedPost | null> => {
-  const idsToTry = Array.from(new Set([postId, urlPostId].filter((value): value is number => Number.isFinite(value) && value > 0)));
+  const idsToTry = Array.from(
+    new Set(
+      [postId, urlPostId].filter(
+        (value): value is number => typeof value === 'number' && Number.isFinite(value) && value > 0,
+      ),
+    ),
+  );
 
   for (const id of idsToTry) {
     const post = await fetchJson<WordPressEntity>(`${apiBase}/posts/${id}`, authHeader);
