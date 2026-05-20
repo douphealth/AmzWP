@@ -34,6 +34,7 @@ import {
 import { deduplicateRequest } from './lib/request-dedup';
 import { supabase } from './src/integrations/supabase/client';
 import { withRetry } from './lib/retry';
+import { fetchWordPressPostContent } from './src/lib/wordpress.functions';
 
 // ============================================================================
 // CACHE & STORAGE CLASSES
@@ -1350,117 +1351,20 @@ export const fetchRawPostContent = async (
   postId: number,
   postUrl: string
 ): Promise<{ content: string; resolvedId: number }> => {
-  // Try WordPress API with ID first
-  if (config.wpUrl && config.wpUser && config.wpAppPassword) {
-    try {
-      const apiBase = getWordPressApiBaseUrl(config.wpUrl);
-      const auth = btoa(`${config.wpUser}:${config.wpAppPassword}`);
+  const result = await fetchWordPressPostContent({
+    data: {
+      postId,
+      postUrl,
+      wpUrl: config.wpUrl,
+      wpUser: config.wpUser,
+      wpAppPassword: config.wpAppPassword,
+    },
+  });
 
-      let response = await fetchWithTimeout(
-        `${apiBase}/posts/${postId}`,
-        15000,
-        {
-          headers: {
-            'Authorization': `Basic ${auth}`,
-            'Accept': 'application/json'
-          }
-        }
-      );
-
-      if (response.ok) {
-        const post = await response.json();
-        const content = post.content?.rendered || post.content?.raw || '';
-
-        if (content.length > 50) {
-          return {
-            content,
-            resolvedId: post.id,
-          };
-        }
-      }
-
-      // Fallback: search by URL slug
-      if (postUrl) {
-        try {
-          const urlObj = new URL(postUrl);
-          const slug = urlObj.pathname.split('/').filter(s => s).pop();
-
-          if (slug) {
-            // Try posts
-            response = await fetchWithTimeout(
-              `${apiBase}/posts?slug=${encodeURIComponent(slug)}`,
-              15000,
-              {
-                headers: {
-                  'Authorization': `Basic ${auth}`,
-                  'Accept': 'application/json'
-                }
-              }
-            );
-
-            if (response.ok) {
-              const posts = await response.json();
-              if (posts.length > 0) {
-                const content = posts[0].content?.rendered || posts[0].content?.raw || '';
-
-                if (content.length > 50) {
-                  return {
-                    content,
-                    resolvedId: posts[0].id,
-                  };
-                }
-              }
-            }
-
-            // Try pages
-            response = await fetchWithTimeout(
-              `${apiBase}/pages?slug=${encodeURIComponent(slug)}`,
-              15000,
-              {
-                headers: {
-                  'Authorization': `Basic ${auth}`,
-                  'Accept': 'application/json'
-                }
-              }
-            );
-
-            if (response.ok) {
-              const pages = await response.json();
-              if (pages.length > 0) {
-                const content = pages[0].content?.rendered || pages[0].content?.raw || '';
-
-                if (content.length > 50) {
-                  return {
-                    content,
-                    resolvedId: pages[0].id,
-                  };
-                }
-              }
-            }
-          }
-        } catch {
-          // Slug parsing failed
-        }
-      }
-    } catch {
-      // WP API failed
-    }
-  }
-
-  // Fallback to proxy fetch if we have a URL
-  if (postUrl) {
-    try {
-      const { content } = await fetchPageContent(config, postUrl);
-
-      if (content && content.length > 50) {
-        return { content, resolvedId: postId };
-      }
-    } catch {
-      // Proxy fetch failed
-    }
-  }
-
-  throw new Error('Failed to fetch post content from all available sources. Please check your WordPress credentials and post URL.');
+  return {
+    content: result.content,
+    resolvedId: result.resolvedId,
+  };
 };
 
 /**
