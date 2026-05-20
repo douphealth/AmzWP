@@ -644,14 +644,53 @@ export const ConfigPanel: React.FC<ConfigPanelProps> = ({ onSave, initialConfig 
         helpText="Your Amazon Associates tracking ID"
       />
 
+      {/* PA-API credentials — premium accuracy mode */}
+      <div className="p-5 bg-gradient-to-br from-amber-500/5 to-orange-500/5 border border-amber-500/20 rounded-2xl space-y-4">
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center">
+            <i className="fa-solid fa-shield-halved text-white text-sm" />
+          </div>
+          <div>
+            <h4 className="text-sm font-bold text-white">Amazon PA-API Credentials</h4>
+            <p className="text-[10px] text-amber-300/80">Premium accuracy — official product data, live pricing &amp; Prime status</p>
+          </div>
+          {(config.amazonAccessKey && config.amazonSecretKey) && (
+            <span className="ml-auto text-[9px] font-black uppercase tracking-widest bg-green-500/20 text-green-300 border border-green-500/30 px-2 py-1 rounded-full">
+              <i className="fa-solid fa-check mr-1" />Active
+            </span>
+          )}
+        </div>
+        <InputField
+          label="Amazon Access Key ID"
+          type="password"
+          value={config.amazonAccessKey || ''}
+          onChange={v => updateConfig('amazonAccessKey', v)}
+          placeholder="AKIAxxxxxxxxxxxxxxxx"
+          icon="fa-id-card"
+          helpText="20-character access key from Amazon Associates → Product Advertising API"
+        />
+        <InputField
+          label="Amazon Secret Access Key"
+          type="password"
+          value={config.amazonSecretKey || ''}
+          onChange={v => updateConfig('amazonSecretKey', v)}
+          placeholder="40-character secret"
+          icon="fa-key"
+          helpText="Encrypted with AES-GCM in this browser only"
+        />
+        <InfoBox type="success" icon="fa-bolt">
+          With PA-API keys filled in, the engine pulls authoritative product data — titles, prices, images, ratings &amp; Prime eligibility — directly from Amazon.
+        </InfoBox>
+      </div>
+
       <InputField
         label="SerpApi Key"
         type="password"
         value={config.serpApiKey || ''}
         onChange={v => updateConfig('serpApiKey', v)}
-        placeholder="Enter SerpApi Key (optional)"
+        placeholder="SerpApi key (fallback enrichment)"
         icon="fa-search"
-        helpText="Optional: For enhanced product data lookup"
+        helpText="Used when PA-API is unavailable, or for candidate search enrichment"
       />
 
       <div className="grid grid-cols-2 gap-4">
@@ -674,11 +713,6 @@ export const ConfigPanel: React.FC<ConfigPanelProps> = ({ onSave, initialConfig 
           helpText="Higher = fewer, more selective product lookups"
         />
       </div>
-
-      <InfoBox type="warning" icon="fa-triangle-exclamation">
-        SerpApi key enables accurate product images and real-time pricing. 
-        Get one at <a href="https://serpapi.com" target="_blank" rel="noopener noreferrer" className="underline hover:text-amber-300">serpapi.com</a>
-      </InfoBox>
 
       <div className="p-4 bg-dark-950 border border-dark-700 rounded-2xl">
         <div className="flex items-center gap-3 mb-3">
