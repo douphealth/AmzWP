@@ -1,5 +1,5 @@
 import { AppConfig, ProductDetails, DeploymentMode, FAQItem } from '../types';
-import { hashString } from '../utils';
+import { hashString, lookupAsin, lookupAmazonSearch, hasProductLookup } from '../utils';
 
 interface Phase1Product {
   name: string;
@@ -25,7 +25,7 @@ export async function detectProductsAggressively(
   // Phase 1: Pattern detection
   const phase1Products = extractProductsPhase1(content, cleanContent);
 
-  if (!config.serpApiKey) {
+  if (!hasProductLookup(config)) {
     return [];
   }
 
@@ -41,7 +41,7 @@ export async function detectProductsAggressively(
       // Try ASIN first if available
       if (p1.asin) {
         try {
-          const result = await fetchProductByASIN(p1.asin, config.serpApiKey);
+          const result = await lookupAsin(p1.asin, config);
           if (result) {
             productData = result;
           }
@@ -53,7 +53,7 @@ export async function detectProductsAggressively(
       // Try search if no ASIN or ASIN failed
       if (!productData.asin) {
         try {
-          productData = await searchAmazonProduct(p1.name, config.serpApiKey);
+          productData = await lookupAmazonSearch(p1.name, config);
         } catch (err: unknown) {
           // Search failed
         }

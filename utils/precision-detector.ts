@@ -18,8 +18,10 @@
 import { AppConfig, ProductDetails, DeploymentMode, FAQItem, ComparisonData } from '../types';
 import {
   callAIProvider,
-  searchAmazonProduct,
-  fetchProductByASIN,
+  lookupAmazonSearch,
+  lookupAsin,
+  hasProductLookup,
+  missingProductLookupMessage,
   IntelligenceCache,
   hashString,
 } from '../utils';
@@ -928,8 +930,8 @@ async function verifyWithAmazon(
   config: AppConfig,
   onProgress?: (current: number, total: number) => void
 ): Promise<ProductDetails[]> {
-  if (!config.serpApiKey?.trim()) {
-    throw new Error('SerpAPI key is required for product verification. Add it in Settings > Amazon.');
+  if (!hasProductLookup(config)) {
+    throw new Error(missingProductLookupMessage());
   }
   
   // === PRE-FILTER: Remove garbage candidates that waste API credits ===
@@ -983,7 +985,7 @@ async function verifyWithAmazon(
       // Try ASIN first if available (more reliable, saves credit vs search)
       if (candidate.asin) {
         try {
-          const result = await fetchProductByASIN(candidate.asin, config.serpApiKey!);
+          const result = await lookupAsin(candidate.asin, config);
           if (result) productData = result;
         } catch (e: any) {
           if (e.message?.includes('401') || e.message?.includes('Invalid') || e.message?.includes('402')) {
@@ -996,9 +998,9 @@ async function verifyWithAmazon(
       // Search if no ASIN result
       if (!productData.asin) {
         try {
-          productData = await searchAmazonProduct(
+          productData = await lookupAmazonSearch(
             candidate.searchQuery,
-            config.serpApiKey!
+            config
           );
         } catch (e: any) {
           if (e.message?.includes('401') || e.message?.includes('Invalid') || e.message?.includes('402')) {
