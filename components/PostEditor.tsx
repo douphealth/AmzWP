@@ -725,7 +725,7 @@ export const PostEditor: React.FC<PostEditorProps> = ({ post, config, onBack }) 
         const contentLen = currentHtml.replace(/<[^>]+>/g, '').trim().length;
 
         if (contentLen < 200) toast('Content too short for product detection.', { duration: 5000 });
-        else if (!config.serpApiKey) toast('SerpAPI key required. Add it in Settings > Amazon.', { duration: 5000 });
+        else if (!hasProductLookup(config)) toast(missingProductLookupMessage(), { duration: 6000 });
         else if (verificationUnavailable) {
           toast('Amazon verification is temporarily unavailable. The scan completed, but no products could be verified right now.', {
             duration: 7000,
@@ -867,7 +867,7 @@ export const PostEditor: React.FC<PostEditorProps> = ({ post, config, onBack }) 
     async (input: string, insertAtIndex?: number): Promise<ProductDetails | null> => {
       const asin = extractASIN(input);
       if (!asin) { toast('Invalid ASIN or Amazon URL.'); return null; }
-      if (!config.serpApiKey) { toast('SerpAPI key required. Configure in Settings.'); return null; }
+      if (!hasProductLookup(config)) { toast(missingProductLookupMessage()); return null; }
 
       // Already in staging? Just inject.
       const existing = Object.values(productMap).find((p) => p.asin === asin);
@@ -901,9 +901,9 @@ export const PostEditor: React.FC<PostEditorProps> = ({ post, config, onBack }) 
           return null;
         }
 
-        const product = await fetchProductByASIN(asin, config.serpApiKey);
+        const product = await lookupAsin(asin, config);
         if (!product?.asin) {
-          toast('ASIN reachable on Amazon, but SerpAPI returned no metadata.');
+          toast('ASIN reachable on Amazon, but no product metadata returned.');
           return null;
         }
 
@@ -926,7 +926,7 @@ export const PostEditor: React.FC<PostEditorProps> = ({ post, config, onBack }) 
       } catch (e: any) {
         const m = e?.message || 'Unknown error';
         if (m.includes('timeout')) toast('Request timed out. Try again.');
-        else if (m.includes('401')) toast('Invalid SerpAPI key.');
+        else if (m.includes('401')) toast('Invalid API credentials (SerpAPI or PA-API).');
         else if (m.includes('429')) toast('Rate limit exceeded. Wait and retry.');
         else toast(`Error: ${m.substring(0, 80)}`);
         return null;
