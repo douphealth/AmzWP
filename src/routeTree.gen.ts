@@ -16,7 +16,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as DashboardIndexRouteImport } from './routes/dashboard.index'
 import { Route as DashboardSitesRouteImport } from './routes/dashboard.sites'
 import { Route as DashboardGeneratorRouteImport } from './routes/dashboard.generator'
-import { Route as ApiHealthRouteImport } from './routes/api/health'
+import { Route as ApiPublicHealthRouteImport } from './routes/api/public/health'
 
 const SignupRoute = SignupRouteImport.update({
   id: '/signup',
@@ -53,9 +53,9 @@ const DashboardGeneratorRoute = DashboardGeneratorRouteImport.update({
   path: '/generator',
   getParentRoute: () => DashboardRoute,
 } as any)
-const ApiHealthRoute = ApiHealthRouteImport.update({
-  id: '/api/health',
-  path: '/api/health',
+const ApiPublicHealthRoute = ApiPublicHealthRouteImport.update({
+  id: '/api/public/health',
+  path: '/api/public/health',
   getParentRoute: () => rootRouteImport,
 } as any)
 
@@ -64,19 +64,19 @@ export interface FileRoutesByFullPath {
   '/dashboard': typeof DashboardRouteWithChildren
   '/login': typeof LoginRoute
   '/signup': typeof SignupRoute
-  '/api/health': typeof ApiHealthRoute
   '/dashboard/generator': typeof DashboardGeneratorRoute
   '/dashboard/sites': typeof DashboardSitesRoute
   '/dashboard/': typeof DashboardIndexRoute
+  '/api/public/health': typeof ApiPublicHealthRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
   '/signup': typeof SignupRoute
-  '/api/health': typeof ApiHealthRoute
   '/dashboard/generator': typeof DashboardGeneratorRoute
   '/dashboard/sites': typeof DashboardSitesRoute
   '/dashboard': typeof DashboardIndexRoute
+  '/api/public/health': typeof ApiPublicHealthRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -84,10 +84,10 @@ export interface FileRoutesById {
   '/dashboard': typeof DashboardRouteWithChildren
   '/login': typeof LoginRoute
   '/signup': typeof SignupRoute
-  '/api/health': typeof ApiHealthRoute
   '/dashboard/generator': typeof DashboardGeneratorRoute
   '/dashboard/sites': typeof DashboardSitesRoute
   '/dashboard/': typeof DashboardIndexRoute
+  '/api/public/health': typeof ApiPublicHealthRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -96,29 +96,29 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/login'
     | '/signup'
-    | '/api/health'
     | '/dashboard/generator'
     | '/dashboard/sites'
     | '/dashboard/'
+    | '/api/public/health'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/login'
     | '/signup'
-    | '/api/health'
     | '/dashboard/generator'
     | '/dashboard/sites'
     | '/dashboard'
+    | '/api/public/health'
   id:
     | '__root__'
     | '/'
     | '/dashboard'
     | '/login'
     | '/signup'
-    | '/api/health'
     | '/dashboard/generator'
     | '/dashboard/sites'
     | '/dashboard/'
+    | '/api/public/health'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -126,7 +126,7 @@ export interface RootRouteChildren {
   DashboardRoute: typeof DashboardRouteWithChildren
   LoginRoute: typeof LoginRoute
   SignupRoute: typeof SignupRoute
-  ApiHealthRoute: typeof ApiHealthRoute
+  ApiPublicHealthRoute: typeof ApiPublicHealthRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -180,11 +180,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardGeneratorRouteImport
       parentRoute: typeof DashboardRoute
     }
-    '/api/health': {
-      id: '/api/health'
-      path: '/api/health'
-      fullPath: '/api/health'
-      preLoaderRoute: typeof ApiHealthRouteImport
+    '/api/public/health': {
+      id: '/api/public/health'
+      path: '/api/public/health'
+      fullPath: '/api/public/health'
+      preLoaderRoute: typeof ApiPublicHealthRouteImport
       parentRoute: typeof rootRouteImport
     }
   }
@@ -211,7 +211,7 @@ const rootRouteChildren: RootRouteChildren = {
   DashboardRoute: DashboardRouteWithChildren,
   LoginRoute: LoginRoute,
   SignupRoute: SignupRoute,
-  ApiHealthRoute: ApiHealthRoute,
+  ApiPublicHealthRoute: ApiPublicHealthRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
