@@ -728,7 +728,7 @@ export const PostEditor: React.FC<PostEditorProps> = ({ post, config, onBack }) 
         const contentLen = currentHtml.replace(/<[^>]+>/g, '').trim().length;
 
         if (contentLen < 200) toast('Content too short for product detection.', { duration: 5000 });
-        else if (!hasProductLookup(config)) toast(missingProductLookupMessage(), { duration: 6000 });
+        else if (!hasProductLookup(config)) toast(missingProductLookupMessage(config), { duration: 6000 });
         else if (verificationUnavailable) {
           toast('Amazon verification is temporarily unavailable. The scan completed, but no products could be verified right now.', {
             duration: 7000,
@@ -870,7 +870,7 @@ export const PostEditor: React.FC<PostEditorProps> = ({ post, config, onBack }) 
     async (input: string, insertAtIndex?: number): Promise<ProductDetails | null> => {
       const asin = extractASIN(input);
       if (!asin) { toast('Invalid ASIN or Amazon URL.'); return null; }
-      if (!hasProductLookup(config)) { toast(missingProductLookupMessage()); return null; }
+      if (!hasProductLookup(config)) { toast(missingProductLookupMessage(config)); return null; }
 
       // Already in staging? Just inject.
       const existing = Object.values(productMap).find((p) => p.asin === asin);
