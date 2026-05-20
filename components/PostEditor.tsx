@@ -50,6 +50,7 @@ import { ProductBoxPreview } from './ProductBoxPreview';
 import { PremiumProductBox } from './PremiumProductBox';
 import { ProductCarousel } from './ProductCarousel';
 import { ComparisonTablePreview } from './ComparisonTablePreview';
+import { BlockInserter } from './BlockInserter';
 import { useHistory } from '../hooks/useHistory';
 import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
 import { useReducedMotion } from '../hooks/useReducedMotion';
