@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from '@tanstack/react-router';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { supabase } from '../integrations/supabase/client';
 
 export const Route = createFileRoute('/dashboard/')({
@@ -124,7 +124,7 @@ function DashboardHome() {
 
 function StatCard({
   label, value, loading, hint, icon, accent, muted,
-}: { label: string; value: number; loading: boolean; hint?: string; icon: JSX.Element; accent: string; muted?: boolean }) {
+}: { label: string; value: number; loading: boolean; hint?: string; icon: ReactNode; accent: string; muted?: boolean }) {
   return (
     <div className={`card-edit p-6 ${muted ? 'opacity-80' : ''}`}>
       <div className="flex items-start justify-between mb-5">

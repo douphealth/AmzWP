@@ -4,7 +4,7 @@ import {
   useRouter,
   Link,
 } from '@tanstack/react-router';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { useAuth } from '../lib/auth';
 
 export const Route = createFileRoute('/dashboard')({
@@ -25,7 +25,7 @@ type NavItem = {
   label: string;
   hint: string;
   exact?: boolean;
-  icon: JSX.Element;
+  icon: ReactNode;
 };
 
 const NAV: NavItem[] = [
