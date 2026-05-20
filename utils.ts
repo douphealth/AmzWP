@@ -2182,9 +2182,9 @@ export const analyzeContentAndFindProduct = async (
     `Budget: ${callBudget} SerpAPI calls · ${phase1Products.length} candidates detected`,
   );
 
-  // Check for SerpAPI key
-  if (!config.serpApiKey || config.serpApiKey.trim().length === 0) {
-    throw new Error('SerpAPI key is required for product detection. Add it in Settings > Amazon.');
+  // Require at least one Amazon product lookup provider (SerpAPI OR PA-API).
+  if (!hasProductLookup(config)) {
+    throw new Error(missingProductLookupMessage());
   }
 
   // Fast path: use the strongest phase-1 signals first, but stay within a strict lookup budget.
