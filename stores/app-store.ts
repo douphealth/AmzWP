@@ -46,12 +46,12 @@ const decryptPersistedConfig = (config: Partial<AppConfig> | undefined): Partial
   if (!config || typeof config !== 'object') return {};
   const next: Partial<AppConfig> = { ...config };
   for (const field of SENSITIVE_CONFIG_FIELDS) {
-    const raw = next[field];
+    const raw = next[field] as string | undefined;
     if (typeof raw !== 'string' || !raw) continue;
     try {
-      next[field] = SecureStorage.decryptSync(raw) as AppConfig[typeof field];
+      (next as Record<string, unknown>)[field] = SecureStorage.decryptSync(raw);
     } catch {
-      next[field] = raw as AppConfig[typeof field];
+      (next as Record<string, unknown>)[field] = raw;
     }
   }
   return next;
