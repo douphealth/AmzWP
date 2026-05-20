@@ -35,6 +35,139 @@ import { deduplicateRequest } from './lib/request-dedup';
 import { supabase } from './src/integrations/supabase/client';
 import { withRetry } from './lib/retry';
 import { fetchWordPressPostContent } from './src/lib/wordpress.functions';
+import { paapiGetItem, paapiSearchItem } from './src/lib/paapi.functions';
+
+// ============================================================================
+// PRODUCT LOOKUP DISPATCHER
+// ============================================================================
+// The app supports two providers for Amazon product enrichment:
+//   1. SerpAPI (cheap, broad, no Associates account required)
+//   2. Amazon PA-API 5.0 (authoritative, requires Associates approval)
+//
+// hasProductLookup(config) reports whether at least one provider is configured.
+// lookupAsin / lookupAmazonSearch pick the best available path automatically:
+// PA-API first when its creds are present (more reliable, official data),
+// falling back to SerpAPI otherwise.
+// ============================================================================
+
+export function hasPaapiCreds(c: Partial<AppConfig>): boolean {
+  return !!(c.amazonAccessKey?.trim() && c.amazonSecretKey?.trim() && c.amazonTag?.trim());
+}
+export function hasSerpApi(c: Partial<AppConfig>): boolean {
+  return !!c.serpApiKey?.trim();
+}
+export function hasProductLookup(c: Partial<AppConfig>): boolean {
+  return hasSerpApi(c) || hasPaapiCreds(c);
+}
+export function missingProductLookupMessage(): string {
+  return 'No Amazon product lookup configured. Add Amazon PA-API credentials (recommended) or a SerpAPI key in Settings > Amazon.';
+}
+
+function paapiToFullProduct(asin: string, mapped: any): ProductDetails {
+  return {
+    id: `prod-${asin}-${Date.now()}`,
+    asin,
+    title: mapped.title || 'Unknown Product',
+    price: mapped.price && mapped.price !== '$XX.XX' ? mapped.price : 'See Price',
+    imageUrl: mapped.imageUrl || `https://images-na.ssl-images-amazon.com/images/P/${asin}.01._SCLZZZZZZZ_.jpg`,
+    rating: mapped.rating || 4.5,
+    reviewCount: mapped.reviewCount || 0,
+    prime: !!mapped.prime,
+    brand: mapped.brand || '',
+    category: 'General',
+    verdict: generateDefaultVerdict(mapped.title || ''),
+    evidenceClaims: (mapped.features && mapped.features.length > 0)
+      ? mapped.features
+      : generateDefaultClaims(),
+    faqs: generateDefaultFaqs(mapped.title || ''),
+    specs: {},
+    insertionIndex: 1,
+    deploymentMode: 'ELITE_BENTO',
+  };
+}
+
+/** Provider-aware ASIN lookup. PA-API first when available. */
+export async function lookupAsin(
+  asin: string,
+  config: Partial<AppConfig>,
+  tracker?: BudgetTracker,
+): Promise<ProductDetails | null> {
+  const normalized = String(asin || '').trim().toUpperCase();
+  if (!/^[A-Z0-9]{10}$/.test(normalized)) throw new Error('Invalid ASIN format');
+
+  if (hasPaapiCreds(config)) {
+    try {
+      const cached = IntelligenceCache.getProduct(normalized);
+      if (cached) return cached;
+      const res = await paapiGetItem({
+        data: {
+          asin: normalized,
+          accessKey: config.amazonAccessKey!,
+          secretKey: config.amazonSecretKey!,
+          partnerTag: config.amazonTag!,
+          region: config.amazonRegion || 'us-east-1',
+        },
+      });
+      if (res?.product) {
+        const product = paapiToFullProduct(normalized, res.product);
+        IntelligenceCache.setProduct(normalized, product);
+        return product;
+      }
+    } catch (e) {
+      // Fall through to SerpAPI if it's configured; otherwise rethrow.
+      if (!hasSerpApi(config)) throw e;
+    }
+  }
+
+  if (hasSerpApi(config)) {
+    return fetchProductByASIN(normalized, config.serpApiKey!, tracker);
+  }
+  throw new Error(missingProductLookupMessage());
+}
+
+/** Provider-aware keyword search. PA-API first when available. */
+export async function lookupAmazonSearch(
+  query: string,
+  config: Partial<AppConfig>,
+  tracker?: BudgetTracker,
+): Promise<Partial<ProductDetails>> {
+  const q = String(query || '').trim();
+  if (!q) return {};
+
+  if (hasPaapiCreds(config)) {
+    try {
+      const res = await paapiSearchItem({
+        data: {
+          keyword: q,
+          accessKey: config.amazonAccessKey!,
+          secretKey: config.amazonSecretKey!,
+          partnerTag: config.amazonTag!,
+          region: config.amazonRegion || 'us-east-1',
+        },
+      });
+      if (res?.product) {
+        return {
+          asin: res.product.asin,
+          title: res.product.title,
+          price: res.product.price,
+          imageUrl: res.product.imageUrl,
+          rating: res.product.rating,
+          reviewCount: res.product.reviewCount,
+          prime: res.product.prime,
+          brand: res.product.brand,
+        };
+      }
+      // No result from PA-API: fall through to SerpAPI if configured.
+    } catch (e) {
+      if (!hasSerpApi(config)) throw e;
+    }
+  }
+
+  if (hasSerpApi(config)) {
+    return searchAmazonProduct(q, config.serpApiKey!, tracker);
+  }
+  throw new Error(missingProductLookupMessage());
+}
 
 // ============================================================================
 // CACHE & STORAGE CLASSES
