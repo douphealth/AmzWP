@@ -1254,43 +1254,61 @@ const analyzePostForPriority = (title: string, content: string): {
     return { priority: 'low', status: 'monetized' };
   }
 
+  // --- Content-side evidence: how many purchasable product mentions actually appear in the body? ---
+  const productMentions = PURCHASABLE_PRODUCTS.filter(p => contentLower.includes(p)).length;
+  const brandMentions = PRODUCT_BRANDS.filter(b => contentLower.includes(b.toLowerCase())).length;
+  const contentEvidence = productMentions + brandMentions;
+  // Has any structural signal an aggressive scanner would also see?
+  const hasAsinInContent = /\b(?:dp|gp\/product)\/[A-Z0-9]{10}\b/.test(content) ||
+                           /data-asin=["'][A-Z0-9]{10}["']/.test(content);
+  const hasStrongEvidence = hasAsinInContent || contentEvidence >= 2;
+  const hasAnyEvidence = hasAsinInContent || contentEvidence >= 1;
+
   // CRITICAL: "Best/Top X [PRODUCT]" where [PRODUCT] is purchasable
+  // — title must be product-led AND the body must back it up, else downgrade.
   const bestSubject = extractBestSubject(titleLower);
   if (bestSubject && isProductSubject(bestSubject)) {
-    return { priority: 'critical', status: 'opportunity' };
+    if (hasStrongEvidence) return { priority: 'critical', status: 'opportunity' };
+    if (hasAnyEvidence) return { priority: 'high', status: 'opportunity' };
+    return { priority: 'low', status: 'opportunity' };
   }
 
-  // CRITICAL: "[PRODUCT] Review" or "[BRAND] Review"
+  // CRITICAL: "[PRODUCT] Review"
   if (/\breview\b/i.test(titleLower) && titleContainsProduct(titleLower)) {
-    return { priority: 'critical', status: 'opportunity' };
+    if (hasStrongEvidence) return { priority: 'critical', status: 'opportunity' };
+    if (hasAnyEvidence) return { priority: 'high', status: 'opportunity' };
+    return { priority: 'low', status: 'opportunity' };
   }
 
-  // CRITICAL: "[PRODUCT/BRAND] vs [PRODUCT/BRAND]"
+  // CRITICAL: "[PRODUCT] vs [PRODUCT]"
   const vsMatch = titleLower.match(/(.+?)\s+(?:vs\.?|versus)\s+(.+?)(?:\s*[-:|]|\s*$)/i);
   if (vsMatch) {
     const p1 = vsMatch[1].trim();
     const p2 = vsMatch[2].trim();
     if ((titleContainsProduct(p1) || titleContainsProduct(p2)) &&
         !(/running|walking|swimming|cycling|cardio|hiit|yoga|diet|fasting/i.test(p1 + ' ' + p2))) {
-      return { priority: 'critical', status: 'opportunity' };
+      if (hasStrongEvidence) return { priority: 'critical', status: 'opportunity' };
+      if (hasAnyEvidence) return { priority: 'high', status: 'opportunity' };
+      return { priority: 'low', status: 'opportunity' };
     }
   }
 
   // CRITICAL: "Buying Guide" + product mentioned
   if (/buying\s+guide|buyer'?s?\s+guide/i.test(titleLower) && titleContainsProduct(titleLower)) {
-    return { priority: 'critical', status: 'opportunity' };
+    if (hasStrongEvidence) return { priority: 'critical', status: 'opportunity' };
+    if (hasAnyEvidence) return { priority: 'high', status: 'opportunity' };
+    return { priority: 'low', status: 'opportunity' };
   }
 
-  // HIGH: Title mentions a specific product or brand
+  // HIGH: Title mentions a specific product or brand — but only if content backs it up.
   if (titleContainsProduct(titleLower)) {
-    return { priority: 'high', status: 'opportunity' };
+    if (hasStrongEvidence) return { priority: 'high', status: 'opportunity' };
+    if (hasAnyEvidence) return { priority: 'medium', status: 'opportunity' };
+    // Title mentions a brand but body is informational — don't oversell as HIGH.
+    return { priority: 'low', status: 'opportunity' };
   }
 
   // HIGH: Content mentions 5+ different products
-  const productMentions = PURCHASABLE_PRODUCTS.filter(p =>
-    contentLower.includes(p)
-  ).length;
-
   if (productMentions >= 5) {
     return { priority: 'high', status: 'opportunity' };
   }

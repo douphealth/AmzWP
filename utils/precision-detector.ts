@@ -16,6 +16,7 @@
  */
 
 import { AppConfig, ProductDetails, DeploymentMode, FAQItem, ComparisonData } from '../types';
+import { detectContentType } from './product-extractor';
 import {
   callAIProvider,
   lookupAmazonSearch,
@@ -1200,8 +1201,9 @@ export async function detectProductsPrecision(
   return {
     products,
     comparison,
-    contentType: 'informational',
+    contentType: detectContentType(htmlContent),
     candidateCount: allCandidates.length,
   };
 }
+
 
