@@ -932,7 +932,7 @@ async function verifyWithAmazon(
   onProgress?: (current: number, total: number) => void
 ): Promise<ProductDetails[]> {
   if (!hasProductLookup(config)) {
-    throw new Error(missingProductLookupMessage());
+    throw new Error(missingProductLookupMessage(config));
   }
   
   // === PRE-FILTER: Remove garbage candidates that waste API credits ===
