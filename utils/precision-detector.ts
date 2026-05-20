@@ -16,6 +16,7 @@
  */
 
 import { AppConfig, ProductDetails, DeploymentMode, FAQItem, ComparisonData } from '../types';
+import { detectContentType } from './product-extractor';
 import {
   callAIProvider,
   lookupAmazonSearch,
