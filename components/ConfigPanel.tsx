@@ -183,6 +183,41 @@ const encryptConfigAsync = async (config: AppConfig): Promise<AppConfig> => {
 };
 
 // ============================================================================
+// PRESETS — save / load multiple named configurations
+// ============================================================================
+
+const PRESETS_KEY = 'amzwp_config_presets_v1';
+
+interface ConfigPreset {
+  id: string;
+  name: string;
+  createdAt: number;
+  updatedAt: number;
+  config: AppConfig; // stored with sensitive fields ALREADY encrypted
+}
+
+const loadPresets = (): ConfigPreset[] => {
+  if (typeof window === 'undefined') return [];
+  try {
+    const raw = window.localStorage.getItem(PRESETS_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+};
+
+const savePresets = (presets: ConfigPreset[]) => {
+  if (typeof window === 'undefined') return;
+  try {
+    window.localStorage.setItem(PRESETS_KEY, JSON.stringify(presets));
+  } catch {
+    /* quota / disabled — non-fatal */
+  }
+};
+
+// ============================================================================
 // VALIDATION
 // ============================================================================
 
