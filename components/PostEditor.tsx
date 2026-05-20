@@ -50,6 +50,7 @@ import { ProductBoxPreview } from './ProductBoxPreview';
 import { PremiumProductBox } from './PremiumProductBox';
 import { ProductCarousel } from './ProductCarousel';
 import { ComparisonTablePreview } from './ComparisonTablePreview';
+import { BlockInserter } from './BlockInserter';
 import { useHistory } from '../hooks/useHistory';
 import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
 import { useReducedMotion } from '../hooks/useReducedMotion';
@@ -854,46 +855,108 @@ export const PostEditor: React.FC<PostEditorProps> = ({ post, config, onBack }) 
     return null;
   };
 
-  const handleAddManualProduct = useCallback(async () => {
-    const asin = extractASIN(manualAsin);
-    if (!asin) { toast('Invalid ASIN or Amazon URL.'); return; }
-    if (!config.serpApiKey) { toast('SerpAPI key required. Configure in Settings.'); return; }
-    if (Object.values(productMap).find((p) => p.asin === asin)) { toast('Product already in staging'); setManualAsin(''); return; }
+  /**
+   * Core add-by-ASIN-or-URL routine. Reused by manual sidebar input,
+   * the inline BlockInserter, and the contentEditable paste handler.
+   * If insertAtIndex is provided, the new product is also injected
+   * into the canvas at that position.
+   */
+  const addProductByAsinOrUrl = useCallback(
+    async (input: string, insertAtIndex?: number): Promise<ProductDetails | null> => {
+      const asin = extractASIN(input);
+      if (!asin) { toast('Invalid ASIN or Amazon URL.'); return null; }
+      if (!config.serpApiKey) { toast('SerpAPI key required. Configure in Settings.'); return null; }
 
-    setAddingProduct(true);
-    try {
-      // Pre-flight: confirm the ASIN actually resolves on amazon.com BEFORE we burn a SerpAPI call
-      // or insert a product whose affiliate link would publish as a 404.
-      const reach = await verifyAsin({ data: { asin } });
-      if (!reach.ok) {
-        const msg =
-          reach.reason === 'not_found' ? `ASIN ${asin} returns 404 on amazon.com — not a real product.` :
-          reach.reason === 'invalid_format' ? `ASIN ${asin} is not a valid Amazon ID format.` :
-          reach.reason === 'timeout' ? 'Amazon reachability check timed out. Try again.' :
-          reach.reason === 'redirected_off_product' ? `ASIN ${asin} redirected away from a product page.` :
-          `ASIN ${asin} could not be verified on Amazon (${reach.reason}).`;
-        toast(msg, { duration: 6000 });
-        return;
+      // Already in staging? Just inject.
+      const existing = Object.values(productMap).find((p) => p.asin === asin);
+      if (existing) {
+        if (typeof insertAtIndex === 'number') {
+          const next = [...editorNodes];
+          next.splice(insertAtIndex, 0, {
+            id: `prod-node-${existing.id}-${Date.now()}`,
+            type: 'PRODUCT',
+            productId: existing.id,
+          });
+          setEditorNodes(next);
+          toast(`Inserted: ${existing.title.substring(0, 40)}…`);
+        } else {
+          toast('Product already in staging');
+        }
+        return existing;
       }
 
-      const product = await fetchProductByASIN(asin, config.serpApiKey);
-      if (product?.asin) {
+      setAddingProduct(true);
+      try {
+        const reach = await verifyAsin({ data: { asin } });
+        if (!reach.ok) {
+          const msg =
+            reach.reason === 'not_found' ? `ASIN ${asin} returns 404 on amazon.com — not a real product.` :
+            reach.reason === 'invalid_format' ? `ASIN ${asin} is not a valid Amazon ID format.` :
+            reach.reason === 'timeout' ? 'Amazon reachability check timed out. Try again.' :
+            reach.reason === 'redirected_off_product' ? `ASIN ${asin} redirected away from a product page.` :
+            `ASIN ${asin} could not be verified on Amazon (${reach.reason}).`;
+          toast(msg, { duration: 6000 });
+          return null;
+        }
+
+        const product = await fetchProductByASIN(asin, config.serpApiKey);
+        if (!product?.asin) {
+          toast('ASIN reachable on Amazon, but SerpAPI returned no metadata.');
+          return null;
+        }
+
         setProductMap((prev) => ({ ...prev, [product.id]: product }));
-        toast(`Added & verified: ${product.title.substring(0, 40)}…`);
-        setManualAsin('');
-      } else {
-        toast('ASIN reachable on Amazon, but SerpAPI returned no metadata.');
+
+        if (typeof insertAtIndex === 'number') {
+          const next = [...editorNodes];
+          next.splice(insertAtIndex, 0, {
+            id: `prod-node-${product.id}-${Date.now()}`,
+            type: 'PRODUCT',
+            productId: product.id,
+          });
+          setEditorNodes(next);
+          toast(`Inserted: ${product.title.substring(0, 40)}…`);
+        } else {
+          toast(`Added & verified: ${product.title.substring(0, 40)}…`);
+        }
+
+        return product;
+      } catch (e: any) {
+        const m = e?.message || 'Unknown error';
+        if (m.includes('timeout')) toast('Request timed out. Try again.');
+        else if (m.includes('401')) toast('Invalid SerpAPI key.');
+        else if (m.includes('429')) toast('Rate limit exceeded. Wait and retry.');
+        else toast(`Error: ${m.substring(0, 80)}`);
+        return null;
+      } finally {
+        setAddingProduct(false);
       }
-    } catch (e: any) {
-      const m = e?.message || 'Unknown error';
-      if (m.includes('timeout')) toast('Request timed out. Try again.');
-      else if (m.includes('401')) toast('Invalid SerpAPI key.');
-      else if (m.includes('429')) toast('Rate limit exceeded. Wait and retry.');
-      else toast(`Error: ${m.substring(0, 80)}`);
-    } finally {
-      setAddingProduct(false);
-    }
-  }, [manualAsin, config, productMap]);
+    },
+    [config, productMap, editorNodes, setEditorNodes],
+  );
+
+  const handleAddManualProduct = useCallback(async () => {
+    const product = await addProductByAsinOrUrl(manualAsin);
+    if (product) setManualAsin('');
+  }, [manualAsin, addProductByAsinOrUrl]);
+
+  /**
+   * Paste handler on contentEditable HTML blocks.
+   * If user pastes a string containing an Amazon URL / ASIN, intercept it
+   * and insert a product box right after this block instead of pasting text.
+   */
+  const handleEditableBlockPaste = useCallback(
+    (e: React.ClipboardEvent<HTMLDivElement>, blockIndex: number) => {
+      const text = e.clipboardData.getData('text/plain').trim();
+      if (!text) return;
+      const asin = extractASIN(text);
+      if (!asin) return; // let normal paste happen
+      e.preventDefault();
+      toast('Amazon URL detected — fetching product…');
+      void addProductByAsinOrUrl(text, blockIndex + 1);
+    },
+    [addProductByAsinOrUrl],
+  );
 
   // ========================================================================
   // HTML GENERATION & PUBLISH
@@ -1257,6 +1320,7 @@ export const PostEditor: React.FC<PostEditorProps> = ({ post, config, onBack }) 
       className="prose prose-xl prose-slate max-w-none focus:outline-none focus:ring-2 focus:ring-brand-100 rounded-xl p-2 transition-all"
       contentEditable
       suppressContentEditableWarning
+      onPaste={(e) => handleEditableBlockPaste(e, index)}
       onBlur={(e) => updateHtmlNode(node.id, sanitizeHtml(e.currentTarget.innerHTML))}
       dangerouslySetInnerHTML={{ __html: sanitizeHtml(node.content || '') }}
     />
@@ -1335,54 +1399,45 @@ export const PostEditor: React.FC<PostEditorProps> = ({ post, config, onBack }) 
                         <div className="absolute -bottom-3 inset-x-0 h-1.5 bg-indigo-500 rounded-full z-30 animate-pulse" />
                       )}
 
-                      {/* ---- INJECTION POINT ---- */}
-                      <div className="h-8 flex items-center justify-center opacity-0 group-hover/node:opacity-100 transition-all z-20">
-                        <div className="relative group/add">
-                          <button className="w-8 h-8 rounded-full bg-brand-50 text-brand-500 border border-brand-200 flex items-center justify-center shadow-sm hover:scale-110 transition-transform">
-                            <i className="fa-solid fa-plus text-[10px]" />
-                          </button>
-
-                          {/* Mini Injection Menu */}
-                          <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 bg-white border border-slate-100 shadow-2xl rounded-xl p-2 flex flex-col gap-1 w-64 opacity-0 group-hover/add:opacity-100 pointer-events-none group-hover/add:pointer-events-auto transition-all transform origin-top scale-95 group-hover/add:scale-100 z-50 max-h-64 overflow-y-auto custom-scrollbar">
-                            <div className="text-[9px] font-black uppercase text-slate-300 px-3 py-1">Insert Node</div>
-                            <button
-                              onClick={() => {
-                                const next = [...editorNodes];
-                                next.splice(index + 1, 0, { id: `html-${Date.now()}`, type: 'HTML', content: '<p>Write something brilliant…</p>' });
-                                setEditorNodes(next);
-                              }}
-                              className="text-left px-3 py-2 text-xs font-bold text-slate-600 hover:bg-slate-50 rounded-lg transition-colors"
-                            >
-                              Text Block
-                            </button>
-
-                            <div className="h-px bg-slate-100 my-1" />
-                            <div className="text-[9px] font-black uppercase text-brand-300 px-3 py-1">Relevant Assets</div>
-
-                            {(() => {
-                              const ctx = getContextualProducts(index);
-                              if (ctx.length === 0) {
-                                return (
-                                  <div className="px-3 py-2 text-[10px] text-slate-400 italic">No assets available</div>
-                                );
-                              }
-                              return ctx.map((p) => (
-                                <button
-                                  key={p.id}
-                                  onClick={() => injectProduct(p.id, index + 1)}
-                                  className="text-left px-3 py-2 text-xs font-bold text-brand-600 hover:bg-brand-50 rounded-lg transition-colors truncate w-full flex items-center gap-2"
-                                >
-                                  <span className="w-1.5 h-1.5 rounded-full bg-brand-400 flex-shrink-0" />
-                                  {p.title}
-                                </button>
-                              ));
-                            })()}
-                          </div>
-                        </div>
-                      </div>
+                      {/* ---- ALWAYS-VISIBLE INLINE INSERTER ---- */}
+                      <BlockInserter
+                        contextualProducts={getContextualProducts(index)}
+                        onInsertText={() => {
+                          const next = [...editorNodes];
+                          next.splice(index + 1, 0, {
+                            id: `html-${Date.now()}`,
+                            type: 'HTML',
+                            content: '<p>Write something brilliant…</p>',
+                          });
+                          setEditorNodes(next);
+                        }}
+                        onInsertProduct={(productId) => injectProduct(productId, index + 1)}
+                        onInsertByAsin={(input) => addProductByAsinOrUrl(input, index + 1).then(() => undefined)}
+                        hasComparison={editorNodes.some((n) => n.type === 'COMPARISON')}
+                        onInsertComparison={() => {
+                          const productsArr = Object.values(productMap);
+                          if (productsArr.length < 2) {
+                            toast('Need at least 2 staged products to build a comparison table.');
+                            return;
+                          }
+                          const next = [...editorNodes];
+                          next.splice(index + 1, 0, {
+                            id: `comp-table-${Date.now()}`,
+                            type: 'COMPARISON',
+                            comparisonData: {
+                              title: 'Compare top picks',
+                              productIds: productsArr.slice(0, 4).map((p) => p.id),
+                              specs: ['price', 'rating', 'brand'],
+                            },
+                          });
+                          setEditorNodes(next);
+                          toast('Comparison table inserted');
+                        }}
+                      />
                     </div>
                   );
                 })}
+
 
                 {/* Empty State */}
                 {editorNodes.length === 0 && (
