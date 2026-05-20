@@ -45,6 +45,7 @@ import {
   lookupAsin,
   hasProductLookup,
   missingProductLookupMessage,
+  calculatePostPriority,
   sanitizeAppConfig,
 } from '../utils';
 
@@ -702,9 +703,11 @@ export const PostEditor: React.FC<PostEditorProps> = ({ post, config, onBack }) 
           !!legacy.scanReport?.skipped.some((item) =>
             ['serpapi_proxy_unavailable', 'serpapi_lookup_unavailable'].includes(item.reason),
           );
+        const priorityAssessment = calculatePostPriority(post.title, currentHtml);
         likelyInformationalArticle =
           !verificationUnavailable &&
           products.length === 0 &&
+          priorityAssessment.priority === 'low' &&
           ((legacy.scanReport?.candidatesEvaluated ?? 0) === 0 ||
             !!legacy.scanReport?.skipped.every((item) =>
               item.reason === 'invalid_query' || item.detail?.includes('editorial heading'),
