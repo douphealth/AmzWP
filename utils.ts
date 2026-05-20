@@ -2970,10 +2970,6 @@ function extractProductsPhase1(htmlContent: string, textContent: string): Phase1
     }
   }
 
-  for (const titleQuery of extractTitleDrivenProductQueries(textContent.split('\n')[0] || '')) {
-    addProduct(titleQuery, 'title_subject', 78);
-  }
-
   // Pattern 5: Comprehensive brand patterns
   const brandPatterns = [
     /\b(Xiaomi|Huawei|Amazfit|COROS|OnePlus|Oppo|Vivo|Realme|Nothing|Oura|Whoop|Theragun|Hyperice|Sonos|Bang\s*&?\s*Olufsen|Marshall|Technics|Audio-Technica|Shure|HyperX|SteelSeries|Elgato|Blue\s*Yeti|Rode|Keychron|Ducky|GMMK|Nanoleaf|Govee|Hue|Ring|Wyze|Arlo|Nest|SimpliSafe|August|Yale|Ecobee|Lutron|Sonos|Blink|TP-Link|Netgear|Ubiquiti|Synology|Anova|Thermapen|Traeger|Blackstone|Lodge|Le\s*Creuset|Staub|All-Clad|Zwilling|Wusthof|Vitamix|Blendtec|NutriBullet|Nespresso|Keurig|Breville|Fellow|Baratza|Rancilio|Gaggia|Osprey|Gregory|Deuter|Arc'teryx|Black\s*Diamond|MSR|Jetboil|BioLite|Goal\s*Zero|Jackery|EcoFlow|Bluetti|Anker|Ugreen|Belkin|Satechi|CalDigit|OWC|Twelve\s*South|Nomad|Peak\s*Design|Moment|Bellroy|Aer|Tortuga|Away|Samsonite|Rimowa|Tumi|Benchmade|Kershaw|Spyderco|Gerber|Victorinox|Cricut|Silhouette|Brother)\s+([A-Za-z0-9][\w\s\-\.&']{1,50}?)(?=[\.\,\!\?\;\:\)\]\"\'\<]|\s+(?:is|are|was|were|has|have|had|with|for|and|or|but|features|offers|comes|includes|provides|delivers|boasts|review|vs|versus|compared)|\s*$)/gi,
