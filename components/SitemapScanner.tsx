@@ -93,6 +93,8 @@ export const SitemapScanner: React.FC<SitemapScannerProps> = ({
     if (filterTab !== 'all') {
       if (filterTab === 'monetized') {
         result = result.filter(p => p.monetizationStatus === 'monetized');
+      } else if (filterTab === 'broken') {
+        result = result.filter(p => p.monetizationStatus === 'broken');
       } else {
         result = result.filter(p => p.priority === filterTab && p.monetizationStatus === 'opportunity');
       }
