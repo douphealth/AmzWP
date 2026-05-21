@@ -204,7 +204,8 @@ export type PostPriority =
  * Post monetization status
  */
 export type MonetizationStatus = 
-  | 'monetized'   // Already has affiliate links
+  | 'monetized'    // Already has working affiliate / Amazon product boxes
+  | 'broken'       // Has product boxes but they're broken (missing image, ASIN, price, or link)
   | 'opportunity'; // Available for monetization
 
 /**

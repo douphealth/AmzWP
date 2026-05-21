@@ -39,7 +39,7 @@ interface SitemapScannerProps {
 
 type ScanStatus = 'idle' | 'scanning' | 'auditing' | 'complete' | 'error';
 type DiscoveryMethod = 'sitemap' | 'wordpress' | 'manual';
-type FilterTab = 'all' | 'critical' | 'high' | 'medium' | 'low' | 'monetized';
+type FilterTab = 'all' | 'broken' | 'critical' | 'high' | 'medium' | 'low' | 'monetized';
 
 // ============================================================================
 // TOAST HELPER
@@ -93,6 +93,8 @@ export const SitemapScanner: React.FC<SitemapScannerProps> = ({
     if (filterTab !== 'all') {
       if (filterTab === 'monetized') {
         result = result.filter(p => p.monetizationStatus === 'monetized');
+      } else if (filterTab === 'broken') {
+        result = result.filter(p => p.monetizationStatus === 'broken');
       } else {
         result = result.filter(p => p.priority === filterTab && p.monetizationStatus === 'opportunity');
       }
@@ -119,6 +121,7 @@ export const SitemapScanner: React.FC<SitemapScannerProps> = ({
   // ========== STATS ==========
   const stats = useMemo(() => ({
     total: posts.length,
+    broken: posts.filter(p => p.monetizationStatus === 'broken').length,
     critical: posts.filter(p => p.priority === 'critical' && p.monetizationStatus === 'opportunity').length,
     high: posts.filter(p => p.priority === 'high' && p.monetizationStatus === 'opportunity').length,
     medium: posts.filter(p => p.priority === 'medium' && p.monetizationStatus === 'opportunity').length,
@@ -396,6 +399,7 @@ export const SitemapScanner: React.FC<SitemapScannerProps> = ({
             <div className="flex gap-2 overflow-x-auto py-4 scrollbar-hide">
               {[
                 { id: 'all' as FilterTab, label: 'All', count: stats.total, icon: 'fa-layer-group' },
+                { id: 'broken' as FilterTab, label: 'Broken Boxes', count: stats.broken, icon: 'fa-link-slash', color: 'pink' },
                 { id: 'critical' as FilterTab, label: 'Critical', count: stats.critical, icon: 'fa-fire', color: 'red' },
                 { id: 'high' as FilterTab, label: 'High', count: stats.high, icon: 'fa-arrow-up', color: 'orange' },
                 { id: 'medium' as FilterTab, label: 'Medium', count: stats.medium, icon: 'fa-minus', color: 'yellow' },
@@ -436,7 +440,7 @@ export const SitemapScanner: React.FC<SitemapScannerProps> = ({
       )}
 
       {/* ========== ACTION GUIDANCE PANEL ========== */}
-      {posts.length > 0 && (stats.critical > 0 || stats.high > 0) && filterTab === 'all' && (
+      {posts.length > 0 && (stats.broken > 0 || stats.critical > 0 || stats.high > 0) && filterTab === 'all' && (
         <div className="flex-shrink-0 bg-dark-900/60 border-b border-dark-800">
           <div className="max-w-6xl mx-auto px-6 md:px-8 py-5">
             <div className="bg-gradient-to-r from-emerald-500/10 via-dark-800/50 to-blue-500/10 border border-dark-700 rounded-2xl p-5">
@@ -447,6 +451,15 @@ export const SitemapScanner: React.FC<SitemapScannerProps> = ({
                 <div className="flex-1 min-w-0">
                   <h4 className="text-white font-bold text-sm mb-2">Action Plan: Monetize Your Content</h4>
                   <div className="space-y-2">
+                    {stats.broken > 0 && (
+                      <div className="flex items-start gap-2">
+                        <span className="w-5 h-5 rounded-md bg-pink-500/20 text-pink-400 flex items-center justify-center flex-shrink-0 text-[10px] font-black mt-0.5">!</span>
+                        <p className="text-gray-400 text-xs leading-relaxed">
+                          <span className="text-pink-400 font-bold">{stats.broken} posts have BROKEN Amazon product boxes</span> (missing image, ASIN, price, or link).
+                          <button onClick={() => setFilterTab('broken')} className="ml-1 text-pink-300 underline underline-offset-2 font-semibold">Fix them now →</button>
+                        </p>
+                      </div>
+                    )}
                     {stats.critical > 0 && (
                       <div className="flex items-start gap-2">
                         <span className="w-5 h-5 rounded-md bg-red-500/20 text-red-400 flex items-center justify-center flex-shrink-0 text-[10px] font-black mt-0.5">1</span>
@@ -557,7 +570,9 @@ export const SitemapScanner: React.FC<SitemapScannerProps> = ({
                         <div className="flex items-center gap-4">
                           {/* Priority Badge */}
                           <div className={`w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 ${
-                            post.monetizationStatus === 'monetized'
+                            post.monetizationStatus === 'broken'
+                              ? 'bg-pink-500/20 text-pink-400'
+                              : post.monetizationStatus === 'monetized'
                               ? 'bg-emerald-500/20 text-emerald-400'
                               : post.priority === 'critical'
                               ? 'bg-red-500/20 text-red-400'
@@ -568,6 +583,7 @@ export const SitemapScanner: React.FC<SitemapScannerProps> = ({
                               : 'bg-slate-500/20 text-slate-400'
                           }`}>
                             <i className={`fa-solid ${
+                              post.monetizationStatus === 'broken' ? 'fa-link-slash' :
                               post.monetizationStatus === 'monetized' ? 'fa-check-double' :
                               post.priority === 'critical' ? 'fa-fire' :
                               post.priority === 'high' ? 'fa-arrow-trend-up' :
@@ -592,6 +608,11 @@ export const SitemapScanner: React.FC<SitemapScannerProps> = ({
                               >
                                 {post.url}
                               </a>
+                              {post.monetizationStatus === 'broken' && (
+                                <span className="hidden md:inline-flex text-[9px] font-bold text-pink-400 bg-pink-500/10 border border-pink-500/30 px-2 py-0.5 rounded whitespace-nowrap">
+                                  Broken product boxes
+                                </span>
+                              )}
                               {post.monetizationStatus === 'opportunity' && post.priority !== 'low' && (
                                 <span className="hidden md:inline-flex text-[9px] font-bold text-amber-400 bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded whitespace-nowrap">
                                   Needs product boxes

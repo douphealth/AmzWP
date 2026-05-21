@@ -58,7 +58,7 @@ export const BlogPostSchema = z.object({
   url: z.string().url(),
   postType: z.enum(['post', 'page', 'custom']).default('post'),
   priority: z.enum(['critical', 'high', 'medium', 'low']).default('medium'),
-  monetizationStatus: z.enum(['monetized', 'opportunity', 'none']).default('opportunity'),
+  monetizationStatus: z.enum(['monetized', 'broken', 'opportunity', 'none']).default('opportunity'),
   modified: z.string().optional(),
 });
 
