@@ -52,7 +52,9 @@ const DashboardGeneratorRoute = DashboardGeneratorRouteImport.update({
   id: '/generator',
   path: '/generator',
   getParentRoute: () => DashboardRoute,
-} as any)
+} as any).lazy(() =>
+  import('./routes/dashboard.generator.lazy').then((d) => d.Route),
+)
 const ApiPublicHealthRoute = ApiPublicHealthRouteImport.update({
   id: '/api/public/health',
   path: '/api/public/health',
