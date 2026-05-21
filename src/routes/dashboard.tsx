@@ -66,6 +66,21 @@ function DashboardChrome() {
   const { user, signOut, loading, session } = useAuth();
   const router = useRouter();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [authTimedOut, setAuthTimedOut] = useState(false);
+
+  useEffect(() => {
+    if (!loading) {
+      setAuthTimedOut(false);
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      setAuthTimedOut(true);
+      router.navigate({ to: '/login', search: { redirect: '/dashboard' } });
+    }, 2500);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [loading, router]);
 
   useEffect(() => {
     if (!loading && !session) {
@@ -82,7 +97,7 @@ function DashboardChrome() {
       <div className="min-h-dvh bg-paper flex items-center justify-center">
         <div className="flex items-center gap-3 text-ink-3">
           <div className="w-5 h-5 border-2 border-accent border-t-transparent rounded-full animate-spin" />
-          <span className="text-sm font-semibold">Loading dashboard…</span>
+          <span className="text-sm font-semibold">{authTimedOut ? 'Redirecting to sign in…' : 'Loading dashboard…'}</span>
         </div>
       </div>
     );
