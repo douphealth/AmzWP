@@ -38,10 +38,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     );
 
-    supabase.auth.getSession().then(({ data }: { data: { session: Session | null } }) => {
-      syncSession(data.session);
-      setLoading(false);
-    });
+    supabase.auth
+      .getSession()
+      .then(({ data }: { data: { session: Session | null } }) => {
+        syncSession(data.session);
+      })
+      .catch((error) => {
+        console.error(error);
+        syncSession(null);
+      })
+      .finally(() => {
+        setLoading(false);
+      });
 
     return () => sub.subscription.unsubscribe();
   }, []);
