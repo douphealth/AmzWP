@@ -186,6 +186,10 @@ class IntelligenceCacheClass {
   private cache = new Map<string, CacheEntry<unknown>>();
   private maxSize = 500;
 
+  private hasBrowserStorage(): boolean {
+    return typeof globalThis !== 'undefined' && 'localStorage' in globalThis;
+  }
+
   get<T>(key: string): T | null {
     const fullKey = `${CACHE_PREFIX}${key}`;
     const entry = this.cache.get(fullKey);
@@ -200,6 +204,7 @@ class IntelligenceCacheClass {
     
     // Try localStorage
     try {
+      if (!this.hasBrowserStorage()) return null;
       const stored = localStorage.getItem(fullKey);
       if (stored) {
         const parsed: CacheEntry<T> = JSON.parse(stored);
@@ -228,6 +233,7 @@ class IntelligenceCacheClass {
     
     // Persist to localStorage
     try {
+      if (!this.hasBrowserStorage()) return;
       localStorage.setItem(fullKey, JSON.stringify(entry));
     } catch {}
     
@@ -237,6 +243,7 @@ class IntelligenceCacheClass {
       if (firstKey) {
         this.cache.delete(firstKey);
         try {
+          if (!this.hasBrowserStorage()) return;
           localStorage.removeItem(firstKey);
         } catch {}
       }
@@ -265,6 +272,7 @@ class IntelligenceCacheClass {
     const key = `${CACHE_PREFIX}product_${asin}`;
     this.cache.delete(key);
     try {
+      if (!this.hasBrowserStorage()) return;
       localStorage.removeItem(key);
     } catch {}
   }
@@ -272,6 +280,7 @@ class IntelligenceCacheClass {
   clear(): void {
     this.cache.clear();
     try {
+      if (!this.hasBrowserStorage()) return;
       const keys = Object.keys(localStorage).filter(k => k.startsWith(CACHE_PREFIX));
       keys.forEach(k => localStorage.removeItem(k));
     } catch {}
