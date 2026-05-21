@@ -121,6 +121,7 @@ export const SitemapScanner: React.FC<SitemapScannerProps> = ({
   // ========== STATS ==========
   const stats = useMemo(() => ({
     total: posts.length,
+    broken: posts.filter(p => p.monetizationStatus === 'broken').length,
     critical: posts.filter(p => p.priority === 'critical' && p.monetizationStatus === 'opportunity').length,
     high: posts.filter(p => p.priority === 'high' && p.monetizationStatus === 'opportunity').length,
     medium: posts.filter(p => p.priority === 'medium' && p.monetizationStatus === 'opportunity').length,
