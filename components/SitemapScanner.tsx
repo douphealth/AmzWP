@@ -570,7 +570,9 @@ export const SitemapScanner: React.FC<SitemapScannerProps> = ({
                         <div className="flex items-center gap-4">
                           {/* Priority Badge */}
                           <div className={`w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 ${
-                            post.monetizationStatus === 'monetized'
+                            post.monetizationStatus === 'broken'
+                              ? 'bg-pink-500/20 text-pink-400'
+                              : post.monetizationStatus === 'monetized'
                               ? 'bg-emerald-500/20 text-emerald-400'
                               : post.priority === 'critical'
                               ? 'bg-red-500/20 text-red-400'
@@ -581,6 +583,7 @@ export const SitemapScanner: React.FC<SitemapScannerProps> = ({
                               : 'bg-slate-500/20 text-slate-400'
                           }`}>
                             <i className={`fa-solid ${
+                              post.monetizationStatus === 'broken' ? 'fa-link-slash' :
                               post.monetizationStatus === 'monetized' ? 'fa-check-double' :
                               post.priority === 'critical' ? 'fa-fire' :
                               post.priority === 'high' ? 'fa-arrow-trend-up' :
@@ -605,6 +608,11 @@ export const SitemapScanner: React.FC<SitemapScannerProps> = ({
                               >
                                 {post.url}
                               </a>
+                              {post.monetizationStatus === 'broken' && (
+                                <span className="hidden md:inline-flex text-[9px] font-bold text-pink-400 bg-pink-500/10 border border-pink-500/30 px-2 py-0.5 rounded whitespace-nowrap">
+                                  Broken product boxes
+                                </span>
+                              )}
                               {post.monetizationStatus === 'opportunity' && post.priority !== 'low' && (
                                 <span className="hidden md:inline-flex text-[9px] font-bold text-amber-400 bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded whitespace-nowrap">
                                   Needs product boxes
