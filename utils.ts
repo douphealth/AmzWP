@@ -3812,7 +3812,7 @@ export const calculatePostPriority = (
 ): {
   priority: 'critical' | 'high' | 'medium' | 'low';
   type: string;
-  status: 'monetized' | 'opportunity';
+  status: 'monetized' | 'opportunity' | 'broken';
 } => {
   const result = analyzePostForPriority(title, content);
 
