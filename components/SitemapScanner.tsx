@@ -440,7 +440,7 @@ export const SitemapScanner: React.FC<SitemapScannerProps> = ({
       )}
 
       {/* ========== ACTION GUIDANCE PANEL ========== */}
-      {posts.length > 0 && (stats.critical > 0 || stats.high > 0) && filterTab === 'all' && (
+      {posts.length > 0 && (stats.broken > 0 || stats.critical > 0 || stats.high > 0) && filterTab === 'all' && (
         <div className="flex-shrink-0 bg-dark-900/60 border-b border-dark-800">
           <div className="max-w-6xl mx-auto px-6 md:px-8 py-5">
             <div className="bg-gradient-to-r from-emerald-500/10 via-dark-800/50 to-blue-500/10 border border-dark-700 rounded-2xl p-5">
