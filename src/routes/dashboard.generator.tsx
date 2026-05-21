@@ -1,5 +1,7 @@
-import { createFileRoute } from '@tanstack/react-router';
-import App from '@/App';
+import { Suspense, lazy } from 'react';
+import { ClientOnly, createFileRoute } from '@tanstack/react-router';
+
+const GeneratorApp = lazy(() => import('@/App'));
 
 export const Route = createFileRoute('/dashboard/generator')({
   head: () => ({
@@ -23,7 +25,29 @@ export const Route = createFileRoute('/dashboard/generator')({
 function GeneratorPage() {
   return (
     <div className="dark-canvas min-h-dvh overflow-hidden bg-dark-950">
-      <App />
+      <ClientOnly
+        fallback={
+          <div className="min-h-dvh flex items-center justify-center bg-dark-950 text-gray-400">
+            <div className="flex items-center gap-3 text-sm font-semibold">
+              <div className="w-5 h-5 border-2 border-brand-500 border-t-transparent rounded-full animate-spin" />
+              Loading generator…
+            </div>
+          </div>
+        }
+      >
+        <Suspense
+          fallback={
+            <div className="min-h-dvh flex items-center justify-center bg-dark-950 text-gray-400">
+              <div className="flex items-center gap-3 text-sm font-semibold">
+                <div className="w-5 h-5 border-2 border-brand-500 border-t-transparent rounded-full animate-spin" />
+                Loading generator…
+              </div>
+            </div>
+          }
+        >
+          <GeneratorApp />
+        </Suspense>
+      </ClientOnly>
     </div>
   );
 }
