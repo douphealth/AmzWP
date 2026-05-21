@@ -24,12 +24,20 @@ export default defineConfig(({ mode }) => ({
     port: 8080,
     allowedHosts: true,
   },
+  ssr: {
+    noExternal: [
+      'h3-v2',
+      '@tanstack/start-server-core',
+      '@tanstack/react-start',
+      '@tanstack/react-start-server',
+    ],
+  },
   environments: {
     server: {
       build: {
         rollupOptions: {
           output: {
-            inlineDynamicImports: true,
+            inlineDynamicImports: false,
           },
         },
       },
@@ -38,7 +46,7 @@ export default defineConfig(({ mode }) => ({
       build: {
         rollupOptions: {
           output: {
-            inlineDynamicImports: true,
+            inlineDynamicImports: false,
           },
         },
       },
