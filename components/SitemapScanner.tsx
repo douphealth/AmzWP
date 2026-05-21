@@ -39,7 +39,7 @@ interface SitemapScannerProps {
 
 type ScanStatus = 'idle' | 'scanning' | 'auditing' | 'complete' | 'error';
 type DiscoveryMethod = 'sitemap' | 'wordpress' | 'manual';
-type FilterTab = 'all' | 'critical' | 'high' | 'medium' | 'low' | 'monetized';
+type FilterTab = 'all' | 'broken' | 'critical' | 'high' | 'medium' | 'low' | 'monetized';
 
 // ============================================================================
 // TOAST HELPER
