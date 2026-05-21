@@ -18,7 +18,7 @@ async function getServerEntry(): Promise<ServerEntry> {
   return serverEntryPromise;
 }
 
-async function normalizeCatastrophicSsrResponse(response: Response) {
+async function normalizeCatastrophicSsrResponse(response: Response, requestUrl: string) {
   if (response.status < 500) return response;
 
   const contentType = response.headers.get('content-type') ?? '';
@@ -30,7 +30,7 @@ async function normalizeCatastrophicSsrResponse(response: Response) {
   }
 
   console.error(
-    consumeLastCapturedError() ?? new Error(`SSR request failed before rendering completed: ${body}`),
+    consumeLastCapturedError() ?? new Error(`SSR request failed for ${requestUrl} before rendering completed: ${body}`),
   );
 
   return new Response(renderErrorPage(), {
@@ -46,9 +46,9 @@ export default {
     try {
       const handler = await getServerEntry();
       const response = await handler.fetch(request, env, ctx);
-      return normalizeCatastrophicSsrResponse(response);
+      return normalizeCatastrophicSsrResponse(response, request.url);
     } catch (error) {
-      console.error(error);
+      console.error(`SSR fetch failed for ${request.url}`, error);
 
       return new Response(renderErrorPage(), {
         status: 500,
