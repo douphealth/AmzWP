@@ -140,9 +140,15 @@ const AMAZON_REGION_OPTIONS: AmazonRegionOption[] = [
 
 /** Sensitive config fields that need encryption */
 const SENSITIVE_FIELDS: (keyof AppConfig)[] = [
-  'amazonAccessKey', 'amazonSecretKey',
-  'geminiApiKey', 'openaiApiKey', 'anthropicApiKey',
-  'groqApiKey', 'openrouterApiKey',
+  'amazonAccessKey',
+  'amazonSecretKey',
+  'wpAppPassword',
+  'serpApiKey',
+  'geminiApiKey',
+  'openaiApiKey',
+  'anthropicApiKey',
+  'groqApiKey',
+  'openrouterApiKey',
 ];
 
 /**
@@ -233,7 +239,10 @@ const loadPresets = (): ConfigPreset[] => {
     const raw = window.localStorage.getItem(PRESETS_KEY);
     if (!raw) return [];
     const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed : [];
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter((preset): preset is ConfigPreset => {
+      return !!preset && typeof preset === 'object' && typeof preset.id === 'string' && typeof preset.name === 'string' && !!preset.config;
+    });
   } catch {
     return [];
   }
@@ -557,14 +566,17 @@ export const ConfigPanel: React.FC<ConfigPanelProps> = ({ onSave, initialConfig 
     try {
       const decrypted = await decryptConfigAsync(preset.config);
       setConfig(decrypted);
+      onSave(await encryptConfigAsync(decrypted));
     } catch {
-      setConfig(decryptConfig(preset.config));
+      const fallback = decryptConfig(preset.config);
+      setConfig(fallback);
+      onSave(await encryptConfigAsync(fallback));
     }
     setActivePresetId(id);
     try { window.localStorage.setItem('amzwp_active_preset_id', id); } catch { /* noop */ }
     setValidationErrors({});
     toast.success(`Loaded "${preset.name}"`);
-  }, [presets]);
+  }, [onSave, presets]);
 
   const handleDeletePreset = useCallback((id: string) => {
     const target = presets.find(p => p.id === id);
