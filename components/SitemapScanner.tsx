@@ -451,6 +451,15 @@ export const SitemapScanner: React.FC<SitemapScannerProps> = ({
                 <div className="flex-1 min-w-0">
                   <h4 className="text-white font-bold text-sm mb-2">Action Plan: Monetize Your Content</h4>
                   <div className="space-y-2">
+                    {stats.broken > 0 && (
+                      <div className="flex items-start gap-2">
+                        <span className="w-5 h-5 rounded-md bg-pink-500/20 text-pink-400 flex items-center justify-center flex-shrink-0 text-[10px] font-black mt-0.5">!</span>
+                        <p className="text-gray-400 text-xs leading-relaxed">
+                          <span className="text-pink-400 font-bold">{stats.broken} posts have BROKEN Amazon product boxes</span> (missing image, ASIN, price, or link).
+                          <button onClick={() => setFilterTab('broken')} className="ml-1 text-pink-300 underline underline-offset-2 font-semibold">Fix them now →</button>
+                        </p>
+                      </div>
+                    )}
                     {stats.critical > 0 && (
                       <div className="flex items-start gap-2">
                         <span className="w-5 h-5 rounded-md bg-red-500/20 text-red-400 flex items-center justify-center flex-shrink-0 text-[10px] font-black mt-0.5">1</span>
