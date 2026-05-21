@@ -1265,98 +1265,166 @@ const isProductSubject = (subject: string): boolean => {
 };
 
 /**
- * Analyze post to determine priority - STRICT PRODUCT-ONLY LOGIC
+ * Detect product-box markers in HTML (any plugin / custom block / inline Amazon link).
+ * Universal — not niche-locked.
+ */
+const PRODUCT_BOX_MARKERS: RegExp[] = [
+  /class=["'][^"']*\b(?:aawp|aawp-product|wp-block-flavor|product-box|amazon-product|amzbox|amz-product|asa[2_]?-?product|amalinkspro|easyazon|woobox-product|table-of-products|prime-?box|product-?card|product-?widget|affiliate-?box)\b[^"']*["']/i,
+  /data-asin=["'][A-Z0-9]{10}["']/i,
+  /\bamazon\.[a-z.]+\/(?:dp|gp\/product|exec\/obidos\/asin)\/[A-Z0-9]{10}/i,
+  /\bamzn\.(?:to|com)\//i,
+  /<a [^>]*href=["'][^"']*amazon\.[a-z.]+[^"']*\?[^"']*tag=[^"']+["']/i,
+  /\baawp[-_]/i,
+  /<div [^>]*id=["']aawp[-_][^"']*["']/i,
+];
+
+const hasProductBoxMarker = (content: string): boolean =>
+  PRODUCT_BOX_MARKERS.some(r => r.test(content));
+
+/**
+ * Detect BROKEN product boxes — box markup present but key bits missing/invalid.
+ * Returns true only when a box-looking block is detected AND it's clearly broken.
+ */
+const detectBrokenProductBoxes = (content: string): boolean => {
+  if (!content) return false;
+
+  // Pull obvious "box" blocks for inspection
+  const boxBlockRegex = /<(?:div|section|aside|table|li)[^>]*class=["'][^"']*(?:aawp|wp-block-flavor|product-box|amazon-product|amz-product|asa[2_]?-?product|amalinkspro|easyazon|affiliate-?box|product-?card|product-?widget)[^"']*["'][\s\S]*?<\/(?:div|section|aside|table|li)>/gi;
+  const boxes = content.match(boxBlockRegex) || [];
+
+  // Generic broken signals anywhere in content
+  const explicitBroken = [
+    /product\s+not\s+(?:found|available)/i,
+    /asin\s+(?:not\s+found|invalid|expired)/i,
+    /currently\s+unavailable/i,
+    /no\s+products?\s+found/i,
+    /api\s+error/i,
+    /aawp-?error/i,
+    /\[aawp[^\]]*\]/i,                        // unrendered shortcode leak
+    /\[amazon[^\]]*\]/i,                      // unrendered Amazon shortcode
+    /src=["']\s*["']/i,                       // empty image src inside box context (checked again below)
+    /src=["'][^"']*(?:no-?image|placeholder|missing|broken|404)[^"']*["']/i,
+  ];
+  for (const re of explicitBroken) {
+    if (re.test(content) && (hasProductBoxMarker(content) || /\[(?:aawp|amazon)/i.test(content))) {
+      return true;
+    }
+  }
+
+  // Per-box structural checks
+  for (const box of boxes) {
+    const hasImg     = /<img\b[^>]*\bsrc=["'][^"']+["']/i.test(box) && !/<img\b[^>]*\bsrc=["']\s*["']/i.test(box);
+    const hasLink    = /<a\b[^>]*\bhref=["'][^"']*(?:amazon\.|amzn\.)[^"']*["']/i.test(box);
+    const hasAsin    = /data-asin=["'][A-Z0-9]{10}["']/i.test(box) ||
+                       /(?:dp|gp\/product)\/[A-Z0-9]{10}/i.test(box);
+    const hasPrice   = /\$\d|€\d|£\d|class=["'][^"']*price[^"']*["']/i.test(box);
+    const hasTitle   = /<(?:h[1-6]|strong|a)\b[^>]*>[\s\S]{4,}?<\/(?:h[1-6]|strong|a)>/i.test(box);
+
+    // Broken if it looks like a box but lacks 2+ essentials
+    const missing = [!hasImg, !hasLink, !hasAsin, !hasPrice, !hasTitle].filter(Boolean).length;
+    if (missing >= 2) return true;
+  }
+
+  return false;
+};
+
+/**
+ * Detect listicle/review/comparison/buying-guide titles — niche-agnostic.
+ */
+const PRODUCT_INTENT_TITLE_PATTERNS: RegExp[] = [
+  /\bbest\b/i,
+  /\btop\s+\d+\b/i,
+  /\btop\s+(?:rated|picks?|choices?)\b/i,
+  /\breview(?:s|ed)?\b/i,
+  /\b(?:vs\.?|versus)\b/i,
+  /\bcomparison\b/i,
+  /\bbuy(?:ing|er'?s?)\s+guide\b/i,
+  /\b(?:recommend(?:ed|ation)s?|picks?|favorites?)\b/i,
+  /\b(?:cheap(?:est)?|affordable|budget|premium|luxury)\b.*\b(?:for|in|under|on)\b/i,
+  /\b(?:gift\s+(?:ideas?|guide))\b/i,
+  /\b\d+\s+best\b/i,
+];
+
+const looksLikeProductIntentTitle = (title: string): boolean =>
+  PRODUCT_INTENT_TITLE_PATTERNS.some(r => r.test(title));
+
+/**
+ * Analyze post to determine priority — UNIVERSAL (niche-agnostic).
+ *
+ * Outcomes:
+ *  - monetized   → working Amazon/affiliate product boxes already in place
+ *  - broken      → product-box markup is present but malformed / missing essentials
+ *  - opportunity → no boxes yet but the post should have them (with priority level)
  */
 const analyzePostForPriority = (title: string, content: string): {
   priority: 'critical' | 'high' | 'medium' | 'low';
-  status: 'monetized' | 'opportunity';
+  status: 'monetized' | 'opportunity' | 'broken';
 } => {
   const titleLower = title.toLowerCase();
-  const contentLower = content.toLowerCase();
+  const contentLower = (content || '').toLowerCase();
 
-  // Check for existing affiliate links (already monetized)
-  const affiliatePatterns = [
-    /amazon\.com\/.*?tag=/i,
-    /amzn\.to\//i,
-    /data-asin="[A-Z0-9]{10}"/i,
-    /aawp-product/i,
-    /wp-block-flavor/i,
-    /class="[^"]*product-?box/i,
-  ];
+  const hasBoxes = hasProductBoxMarker(content || '');
+  const broken = hasBoxes && detectBrokenProductBoxes(content || '');
 
-  if (affiliatePatterns.some(p => p.test(content))) {
+  // 1. BROKEN takes precedence — these need fixing.
+  if (broken) {
+    return { priority: 'critical', status: 'broken' };
+  }
+
+  // 2. Already monetized with working boxes
+  if (hasBoxes) {
     return { priority: 'low', status: 'monetized' };
   }
 
-  // --- Content-side evidence: how many purchasable product mentions actually appear in the body? ---
+  // 3. Title-driven product intent (universal — works for any niche)
+  const productIntent  = looksLikeProductIntentTitle(titleLower);
+  const isListicle     = /\b(?:best|top\s+\d+|\d+\s+best)\b/i.test(titleLower);
+  const isReview       = /\breview(?:s|ed)?\b/i.test(titleLower);
+  const isComparison   = /\b(?:vs\.?|versus|comparison)\b/i.test(titleLower);
+  const isBuyingGuide  = /\bbuy(?:ing|er'?s?)\s+guide\b/i.test(titleLower);
+
+  // Niche-specific (kept as bonus signal, never a gate)
   const productMentions = PURCHASABLE_PRODUCTS.filter(p => contentLower.includes(p)).length;
-  const brandMentions = PRODUCT_BRANDS.filter(b => contentLower.includes(b.toLowerCase())).length;
-  const contentEvidence = productMentions + brandMentions;
-  // Has any structural signal an aggressive scanner would also see?
-  const hasAsinInContent = /\b(?:dp|gp\/product)\/[A-Z0-9]{10}\b/.test(content) ||
-                           /data-asin=["'][A-Z0-9]{10}["']/.test(content);
-  const hasStrongEvidence = hasAsinInContent || contentEvidence >= 2;
-  const hasAnyEvidence = hasAsinInContent || contentEvidence >= 1;
+  const brandMentions   = PRODUCT_BRANDS.filter(b => contentLower.includes(b.toLowerCase())).length;
+  const nicheEvidence   = productMentions + brandMentions;
 
-  // CRITICAL: "Best/Top X [PRODUCT]" where [PRODUCT] is purchasable
-  // — title must be product-led AND the body must back it up, else downgrade.
-  const bestSubject = extractBestSubject(titleLower);
-  if (bestSubject && isProductSubject(bestSubject)) {
-    if (hasStrongEvidence) return { priority: 'critical', status: 'opportunity' };
-    if (hasAnyEvidence) return { priority: 'high', status: 'opportunity' };
-    return { priority: 'low', status: 'opportunity' };
-  }
+  // Universal commerce evidence in body
+  const dollarHits   = (content.match(/(?:\$|€|£)\s?\d{1,4}(?:[.,]\d{2})?/g) || []).length;
+  const amazonLinks  = (content.match(/amazon\.[a-z.]+\/(?:dp|gp|s\?|exec)|amzn\.(?:to|com)/gi) || []).length;
+  const numberedList = /<(?:h[2-4])[^>]*>\s*(?:\d+[\.\):]|#\d+)/i.test(content);
+  const commerceEvidence = dollarHits + amazonLinks * 2 + (numberedList ? 1 : 0) + nicheEvidence;
 
-  // CRITICAL: "[PRODUCT] Review"
-  if (/\breview\b/i.test(titleLower) && titleContainsProduct(titleLower)) {
-    if (hasStrongEvidence) return { priority: 'critical', status: 'opportunity' };
-    if (hasAnyEvidence) return { priority: 'high', status: 'opportunity' };
-    return { priority: 'low', status: 'opportunity' };
-  }
-
-  // CRITICAL: "[PRODUCT] vs [PRODUCT]"
-  const vsMatch = titleLower.match(/(.+?)\s+(?:vs\.?|versus)\s+(.+?)(?:\s*[-:|]|\s*$)/i);
-  if (vsMatch) {
-    const p1 = vsMatch[1].trim();
-    const p2 = vsMatch[2].trim();
-    if ((titleContainsProduct(p1) || titleContainsProduct(p2)) &&
-        !(/running|walking|swimming|cycling|cardio|hiit|yoga|diet|fasting/i.test(p1 + ' ' + p2))) {
-      if (hasStrongEvidence) return { priority: 'critical', status: 'opportunity' };
-      if (hasAnyEvidence) return { priority: 'high', status: 'opportunity' };
-      return { priority: 'low', status: 'opportunity' };
+  // 4. CRITICAL — product-intent listicle/review/comparison/guide
+  if (isListicle || isReview || isComparison || isBuyingGuide) {
+    // These titles are by definition product-led. Always at least HIGH.
+    if (commerceEvidence >= 2 || nicheEvidence >= 1) {
+      return { priority: 'critical', status: 'opportunity' };
     }
-  }
-
-  // CRITICAL: "Buying Guide" + product mentioned
-  if (/buying\s+guide|buyer'?s?\s+guide/i.test(titleLower) && titleContainsProduct(titleLower)) {
-    if (hasStrongEvidence) return { priority: 'critical', status: 'opportunity' };
-    if (hasAnyEvidence) return { priority: 'high', status: 'opportunity' };
-    return { priority: 'low', status: 'opportunity' };
-  }
-
-  // HIGH: Title mentions a specific product or brand — but only if content backs it up.
-  if (titleContainsProduct(titleLower)) {
-    if (hasStrongEvidence) return { priority: 'high', status: 'opportunity' };
-    if (hasAnyEvidence) return { priority: 'medium', status: 'opportunity' };
-    // Title mentions a brand but body is informational — don't oversell as HIGH.
-    return { priority: 'low', status: 'opportunity' };
-  }
-
-  // HIGH: Content mentions 5+ different products
-  if (productMentions >= 5) {
     return { priority: 'high', status: 'opportunity' };
   }
 
-  // MEDIUM: How-to or guide that mentions at least one product
-  if (/\bhow\s+to\b|\bguide\b|\bessential/i.test(titleLower)) {
-    if (productMentions >= 1) {
-      return { priority: 'medium', status: 'opportunity' };
-    }
+  // 5. Other product-intent titles (recommendations, picks, gift guides…)
+  if (productIntent) {
+    if (commerceEvidence >= 2) return { priority: 'high', status: 'opportunity' };
+    return { priority: 'medium', status: 'opportunity' };
   }
 
-  // LOW: Everything else (informational, lifestyle, tips, etc.)
+  // 6. Content-only signals (informational title but body is product-heavy)
+  if (commerceEvidence >= 4 || amazonLinks >= 1 || nicheEvidence >= 3) {
+    return { priority: 'high', status: 'opportunity' };
+  }
+  if (commerceEvidence >= 2 || nicheEvidence >= 1) {
+    return { priority: 'medium', status: 'opportunity' };
+  }
+
+  // 7. How-to / guide with at least some product context
+  if (/\bhow\s+to\b|\bguide\b|\bessential|\bchecklist\b/i.test(titleLower) && dollarHits + nicheEvidence >= 1) {
+    return { priority: 'medium', status: 'opportunity' };
+  }
+
   return { priority: 'low', status: 'opportunity' };
 };
+
 
 
 export const resetProxyStats = (): void => {
