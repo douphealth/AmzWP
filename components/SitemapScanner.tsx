@@ -399,6 +399,7 @@ export const SitemapScanner: React.FC<SitemapScannerProps> = ({
             <div className="flex gap-2 overflow-x-auto py-4 scrollbar-hide">
               {[
                 { id: 'all' as FilterTab, label: 'All', count: stats.total, icon: 'fa-layer-group' },
+                { id: 'broken' as FilterTab, label: 'Broken Boxes', count: stats.broken, icon: 'fa-link-slash', color: 'pink' },
                 { id: 'critical' as FilterTab, label: 'Critical', count: stats.critical, icon: 'fa-fire', color: 'red' },
                 { id: 'high' as FilterTab, label: 'High', count: stats.high, icon: 'fa-arrow-up', color: 'orange' },
                 { id: 'medium' as FilterTab, label: 'Medium', count: stats.medium, icon: 'fa-minus', color: 'yellow' },
