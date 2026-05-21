@@ -257,6 +257,28 @@ const savePresets = (presets: ConfigPreset[]) => {
   }
 };
 
+const CONFIG_VALUE_FIELDS: (keyof AppConfig)[] = [
+  'amazonTag',
+  'amazonAccessKey',
+  'amazonSecretKey',
+  'wpUrl',
+  'wpUser',
+  'wpAppPassword',
+  'serpApiKey',
+  'geminiApiKey',
+  'openaiApiKey',
+  'anthropicApiKey',
+  'groqApiKey',
+  'openrouterApiKey',
+  'customModel',
+];
+
+const hasMeaningfulConfigValues = (config: Partial<AppConfig> | undefined): boolean =>
+  CONFIG_VALUE_FIELDS.some((field) => {
+    const value = config?.[field];
+    return typeof value === 'string' && value.trim().length > 0;
+  });
+
 // ============================================================================
 // VALIDATION
 // ============================================================================
@@ -595,6 +617,32 @@ export const ConfigPanel: React.FC<ConfigPanelProps> = ({ onSave, initialConfig 
     () => presets.find(p => p.id === activePresetId) ?? null,
     [presets, activePresetId]
   );
+
+  useEffect(() => {
+    if (!activePreset || hasMeaningfulConfigValues(config)) return;
+
+    let cancelled = false;
+
+    const syncActivePreset = async () => {
+      try {
+        const decrypted = await decryptConfigAsync(activePreset.config);
+        if (cancelled) return;
+        setConfig(decrypted);
+        onSave(await encryptConfigAsync(decrypted));
+      } catch {
+        const fallback = decryptConfig(activePreset.config);
+        if (cancelled) return;
+        setConfig(fallback);
+        onSave(await encryptConfigAsync(fallback));
+      }
+    };
+
+    void syncActivePreset();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [activePreset, config, onSave]);
 
   // ========== MEMOIZED VALUES ==========
   const currentProvider = useMemo(
