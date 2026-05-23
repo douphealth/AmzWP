@@ -32,24 +32,4 @@ export default defineConfig(({ mode }) => ({
       '@tanstack/react-start-server',
     ],
   },
-  environments: {
-    server: {
-      build: {
-        rollupOptions: {
-          output: {
-            inlineDynamicImports: false,
-          },
-        },
-      },
-    },
-    ssr: {
-      build: {
-        rollupOptions: {
-          output: {
-            inlineDynamicImports: false,
-          },
-        },
-      },
-    },
-  },
 }));
