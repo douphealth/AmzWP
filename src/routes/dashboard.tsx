@@ -1,6 +1,7 @@
 import {
   createFileRoute,
   Outlet,
+  useLocation,
   useRouter,
   Link,
 } from '@tanstack/react-router';
@@ -65,8 +66,10 @@ const NAV: NavItem[] = [
 function DashboardChrome() {
   const { user, signOut, loading, session } = useAuth();
   const router = useRouter();
+  const location = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [authTimedOut, setAuthTimedOut] = useState(false);
+  const redirectTarget = `${location.pathname}${location.searchStr}`;
 
   useEffect(() => {
     if (!loading) {
@@ -76,17 +79,17 @@ function DashboardChrome() {
 
     const timeoutId = window.setTimeout(() => {
       setAuthTimedOut(true);
-      router.navigate({ to: '/login', search: { redirect: '/dashboard' } });
+      router.navigate({ to: '/login', search: { redirect: redirectTarget } });
     }, 2500);
 
     return () => window.clearTimeout(timeoutId);
-  }, [loading, router]);
+  }, [loading, redirectTarget, router]);
 
   useEffect(() => {
     if (!loading && !session) {
-      router.navigate({ to: '/login', search: { redirect: '/dashboard' } });
+      router.navigate({ to: '/login', search: { redirect: redirectTarget } });
     }
-  }, [loading, router, session]);
+  }, [loading, redirectTarget, router, session]);
 
   useEffect(() => {
     setMobileOpen(false);
@@ -107,7 +110,7 @@ function DashboardChrome() {
 
   const handleSignOut = async () => {
     await signOut();
-    router.navigate({ to: '/login', search: { redirect: '/dashboard' } });
+    router.navigate({ to: '/login', search: { redirect: redirectTarget } });
   };
 
   const initial = user?.email?.[0]?.toUpperCase() ?? '?';
