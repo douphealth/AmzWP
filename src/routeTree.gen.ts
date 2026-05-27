@@ -8,6 +8,8 @@
 // You should NOT make any changes in this file as it will be overwritten.
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
+import { createFileRoute } from '@tanstack/react-router'
+
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as SignupRouteImport } from './routes/signup'
 import { Route as LoginRouteImport } from './routes/login'
@@ -15,8 +17,11 @@ import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as DashboardIndexRouteImport } from './routes/dashboard.index'
 import { Route as DashboardSitesRouteImport } from './routes/dashboard.sites'
-import { Route as DashboardGeneratorRouteImport } from './routes/dashboard.generator'
 import { Route as ApiPublicHealthRouteImport } from './routes/api/public/health'
+
+const DashboardGeneratorLazyRouteImport = createFileRoute(
+  '/dashboard/generator',
+)()
 
 const SignupRoute = SignupRouteImport.update({
   id: '/signup',
@@ -43,18 +48,18 @@ const DashboardIndexRoute = DashboardIndexRouteImport.update({
   path: '/',
   getParentRoute: () => DashboardRoute,
 } as any)
-const DashboardSitesRoute = DashboardSitesRouteImport.update({
-  id: '/sites',
-  path: '/sites',
-  getParentRoute: () => DashboardRoute,
-} as any)
-const DashboardGeneratorRoute = DashboardGeneratorRouteImport.update({
+const DashboardGeneratorLazyRoute = DashboardGeneratorLazyRouteImport.update({
   id: '/generator',
   path: '/generator',
   getParentRoute: () => DashboardRoute,
 } as any).lazy(() =>
   import('./routes/dashboard.generator.lazy').then((d) => d.Route),
 )
+const DashboardSitesRoute = DashboardSitesRouteImport.update({
+  id: '/sites',
+  path: '/sites',
+  getParentRoute: () => DashboardRoute,
+} as any)
 const ApiPublicHealthRoute = ApiPublicHealthRouteImport.update({
   id: '/api/public/health',
   path: '/api/public/health',
@@ -66,8 +71,8 @@ export interface FileRoutesByFullPath {
   '/dashboard': typeof DashboardRouteWithChildren
   '/login': typeof LoginRoute
   '/signup': typeof SignupRoute
-  '/dashboard/generator': typeof DashboardGeneratorRoute
   '/dashboard/sites': typeof DashboardSitesRoute
+  '/dashboard/generator': typeof DashboardGeneratorLazyRoute
   '/dashboard/': typeof DashboardIndexRoute
   '/api/public/health': typeof ApiPublicHealthRoute
 }
@@ -75,8 +80,8 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
   '/signup': typeof SignupRoute
-  '/dashboard/generator': typeof DashboardGeneratorRoute
   '/dashboard/sites': typeof DashboardSitesRoute
+  '/dashboard/generator': typeof DashboardGeneratorLazyRoute
   '/dashboard': typeof DashboardIndexRoute
   '/api/public/health': typeof ApiPublicHealthRoute
 }
@@ -86,8 +91,8 @@ export interface FileRoutesById {
   '/dashboard': typeof DashboardRouteWithChildren
   '/login': typeof LoginRoute
   '/signup': typeof SignupRoute
-  '/dashboard/generator': typeof DashboardGeneratorRoute
   '/dashboard/sites': typeof DashboardSitesRoute
+  '/dashboard/generator': typeof DashboardGeneratorLazyRoute
   '/dashboard/': typeof DashboardIndexRoute
   '/api/public/health': typeof ApiPublicHealthRoute
 }
@@ -98,8 +103,8 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/login'
     | '/signup'
-    | '/dashboard/generator'
     | '/dashboard/sites'
+    | '/dashboard/generator'
     | '/dashboard/'
     | '/api/public/health'
   fileRoutesByTo: FileRoutesByTo
@@ -107,8 +112,8 @@ export interface FileRouteTypes {
     | '/'
     | '/login'
     | '/signup'
-    | '/dashboard/generator'
     | '/dashboard/sites'
+    | '/dashboard/generator'
     | '/dashboard'
     | '/api/public/health'
   id:
@@ -117,8 +122,8 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/login'
     | '/signup'
-    | '/dashboard/generator'
     | '/dashboard/sites'
+    | '/dashboard/generator'
     | '/dashboard/'
     | '/api/public/health'
   fileRoutesById: FileRoutesById
@@ -168,18 +173,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardIndexRouteImport
       parentRoute: typeof DashboardRoute
     }
+    '/dashboard/generator': {
+      id: '/dashboard/generator'
+      path: '/generator'
+      fullPath: '/dashboard/generator'
+      preLoaderRoute: typeof DashboardGeneratorLazyRouteImport
+      parentRoute: typeof DashboardRoute
+    }
     '/dashboard/sites': {
       id: '/dashboard/sites'
       path: '/sites'
       fullPath: '/dashboard/sites'
       preLoaderRoute: typeof DashboardSitesRouteImport
-      parentRoute: typeof DashboardRoute
-    }
-    '/dashboard/generator': {
-      id: '/dashboard/generator'
-      path: '/generator'
-      fullPath: '/dashboard/generator'
-      preLoaderRoute: typeof DashboardGeneratorRouteImport
       parentRoute: typeof DashboardRoute
     }
     '/api/public/health': {
@@ -193,14 +198,14 @@ declare module '@tanstack/react-router' {
 }
 
 interface DashboardRouteChildren {
-  DashboardGeneratorRoute: typeof DashboardGeneratorRoute
   DashboardSitesRoute: typeof DashboardSitesRoute
+  DashboardGeneratorLazyRoute: typeof DashboardGeneratorLazyRoute
   DashboardIndexRoute: typeof DashboardIndexRoute
 }
 
 const DashboardRouteChildren: DashboardRouteChildren = {
-  DashboardGeneratorRoute: DashboardGeneratorRoute,
   DashboardSitesRoute: DashboardSitesRoute,
+  DashboardGeneratorLazyRoute: DashboardGeneratorLazyRoute,
   DashboardIndexRoute: DashboardIndexRoute,
 }
 

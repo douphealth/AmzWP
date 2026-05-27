@@ -43,17 +43,16 @@ export const Route = createRootRouteWithContext<RouterContext>()({
       },
     ],
   }),
+  shellComponent: RootDocument,
   component: RootComponent,
   errorComponent: RootErrorComponent,
   notFoundComponent: () => (
-    <RootDocument>
-      <div className="min-h-screen flex items-center justify-center bg-dark-950 text-white">
-        <div className="text-center">
-          <h1 className="text-3xl font-black mb-2">404</h1>
-          <p className="text-gray-400">Page not found</p>
-        </div>
+    <div className="min-h-screen flex items-center justify-center bg-dark-950 text-white">
+      <div className="text-center">
+        <h1 className="text-3xl font-black mb-2">404</h1>
+        <p className="text-gray-400">Page not found</p>
       </div>
-    </RootDocument>
+    </div>
   ),
 });
 
@@ -63,64 +62,61 @@ function RootErrorComponent({ error, reset }: { error: Error; reset: () => void 
   console.error(error);
 
   return (
-    <RootDocument>
-      <div className="min-h-screen bg-dark-950 flex items-center justify-center p-8">
-        <div className="bg-dark-900 border border-red-500/30 rounded-3xl p-8 max-w-lg text-center">
-          <h1 className="text-2xl font-black text-white mb-4">Application Error</h1>
-          <p className="text-gray-400 mb-6">{error.message}</p>
-          <div className="flex flex-wrap justify-center gap-3">
-            <button
-              onClick={() => {
-                router.invalidate();
-                reset();
-              }}
-              className="bg-white text-dark-950 px-6 py-3 rounded-xl font-bold hover:bg-brand-500 hover:text-white transition-all"
-            >
-              Try again
-            </button>
-            <Link
-              to="/"
-              className="border border-dark-700 text-white px-6 py-3 rounded-xl font-bold hover:bg-dark-800 transition-all"
-            >
-              Go home
-            </Link>
-          </div>
+    <div className="min-h-screen bg-dark-950 flex items-center justify-center p-8">
+      <div className="bg-dark-900 border border-red-500/30 rounded-3xl p-8 max-w-lg text-center">
+        <h1 className="text-2xl font-black text-white mb-4">Application Error</h1>
+        <p className="text-gray-400 mb-6">{error.message}</p>
+        <div className="flex flex-wrap justify-center gap-3">
+          <button
+            onClick={() => {
+              router.invalidate();
+              reset();
+            }}
+            className="bg-white text-dark-950 px-6 py-3 rounded-xl font-bold hover:bg-brand-500 hover:text-white transition-all"
+          >
+            Try again
+          </button>
+          <Link
+            to="/"
+            className="border border-dark-700 text-white px-6 py-3 rounded-xl font-bold hover:bg-dark-800 transition-all"
+          >
+            Go home
+          </Link>
         </div>
       </div>
-    </RootDocument>
+    </div>
   );
 }
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
+
   return (
-    <RootDocument>
-      <ErrorBoundary
-        fallbackRender={({ error, resetErrorBoundary }) => (
-          <div className="min-h-screen bg-dark-950 flex items-center justify-center p-8">
-            <div className="bg-dark-900 border border-red-500/30 rounded-3xl p-8 max-w-lg text-center">
-              <h1 className="text-2xl font-black text-white mb-4">
-                Application Error
-              </h1>
-              <p className="text-gray-400 mb-6">{error.message}</p>
-              <button
-                onClick={resetErrorBoundary}
-                className="bg-white text-dark-950 px-6 py-3 rounded-xl font-bold hover:bg-brand-500 hover:text-white transition-all"
-              >
-                Try again
-              </button>
-            </div>
+    <ErrorBoundary
+      fallbackRender={({ error, resetErrorBoundary }) => (
+        <div className="min-h-screen bg-dark-950 flex items-center justify-center p-8">
+          <div className="bg-dark-900 border border-red-500/30 rounded-3xl p-8 max-w-lg text-center">
+            <h1 className="text-2xl font-black text-white mb-4">
+              Application Error
+            </h1>
+            <p className="text-gray-400 mb-6">{error.message}</p>
+            <button
+              onClick={resetErrorBoundary}
+              className="bg-white text-dark-950 px-6 py-3 rounded-xl font-bold hover:bg-brand-500 hover:text-white transition-all"
+            >
+              Try again
+            </button>
           </div>
-        )}
-      >
-        <QueryClientProvider client={queryClient}>
-          <AuthProvider>
-            <Outlet />
-            <Toaster richColors position="top-right" />
-          </AuthProvider>
-        </QueryClientProvider>
-      </ErrorBoundary>
-    </RootDocument>
+        </div>
+      )}
+    >
+      <QueryClientProvider client={queryClient}>
+        <AuthProvider>
+          <Outlet />
+          <Toaster richColors position="top-right" />
+        </AuthProvider>
+      </QueryClientProvider>
+    </ErrorBoundary>
   );
 }
 
@@ -131,7 +127,7 @@ function RootDocument({ children }: { children: ReactNode }) {
         <HeadContent />
       </head>
       <body className="bg-paper text-ink antialiased">
-        <div id="root">{children}</div>
+        {children}
         <Scripts />
       </body>
     </html>
