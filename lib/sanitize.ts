@@ -1,4 +1,4 @@
-import DOMPurify from 'dompurify';
+import createDOMPurify from 'dompurify';
 
 const SAFE_CONFIG = {
   ALLOWED_TAGS: [
@@ -18,12 +18,25 @@ const SAFE_CONFIG = {
   RETURN_TRUSTED_TYPE: false,
 };
 
+function sanitizeFallback(dirty: string): string {
+  return dirty.replace(/<script[\s\S]*?>[\s\S]*?<\/script>/gi, '');
+}
+
+function getSanitizer() {
+  if (typeof window === 'undefined') return null;
+  return createDOMPurify(window);
+}
+
 export function sanitizeHtml(dirty: string): string {
   if (!dirty) return '';
-  return DOMPurify.sanitize(dirty, SAFE_CONFIG) as string;
+  const purifier = getSanitizer();
+  if (!purifier) return sanitizeFallback(dirty);
+  return purifier.sanitize(dirty, SAFE_CONFIG) as string;
 }
 
 export function sanitizePlainText(dirty: string): string {
   if (!dirty) return '';
-  return DOMPurify.sanitize(dirty, { ALLOWED_TAGS: [], ALLOWED_ATTR: [], RETURN_TRUSTED_TYPE: false }) as string;
+  const purifier = getSanitizer();
+  if (!purifier) return dirty.replace(/<[^>]+>/g, '');
+  return purifier.sanitize(dirty, { ALLOWED_TAGS: [], ALLOWED_ATTR: [], RETURN_TRUSTED_TYPE: false }) as string;
 }
