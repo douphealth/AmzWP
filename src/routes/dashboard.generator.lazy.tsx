@@ -1,5 +1,7 @@
-import { createLazyFileRoute } from '@tanstack/react-router';
-import App from '@/App';
+import { Suspense, lazy } from 'react';
+import { ClientOnly, createLazyFileRoute } from '@tanstack/react-router';
+
+const GeneratorApp = lazy(() => import('@/App'));
 
 export const Route = createLazyFileRoute('/dashboard/generator')({
   component: GeneratorPage,
@@ -20,7 +22,27 @@ export const Route = createLazyFileRoute('/dashboard/generator')({
 function GeneratorPage() {
   return (
     <div className="dark-canvas min-h-dvh overflow-hidden bg-dark-950">
-      <App />
+      <ClientOnly
+        fallback={
+          <div className="min-h-dvh bg-dark-950 flex items-center justify-center">
+            <p className="text-gray-500 font-bold uppercase tracking-widest text-xs">
+              Loading generator...
+            </p>
+          </div>
+        }
+      >
+        <Suspense
+          fallback={
+            <div className="min-h-dvh bg-dark-950 flex items-center justify-center">
+              <p className="text-gray-500 font-bold uppercase tracking-widest text-xs">
+                Loading generator...
+              </p>
+            </div>
+          }
+        >
+          <GeneratorApp />
+        </Suspense>
+      </ClientOnly>
     </div>
   );
 }
