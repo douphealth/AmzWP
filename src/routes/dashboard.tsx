@@ -5,7 +5,7 @@ import {
   useRouter,
   Link,
 } from '@tanstack/react-router';
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { useAuth } from '../lib/auth';
 
 export const Route = createFileRoute('/dashboard')({
@@ -69,31 +69,39 @@ function DashboardChrome() {
   const location = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [authTimedOut, setAuthTimedOut] = useState(false);
+  const hasRedirectedRef = useRef(false);
   const redirectTarget = `${location.pathname}${location.searchStr}`;
 
   useEffect(() => {
+    if (!location.pathname.startsWith('/dashboard')) return;
+
     if (!loading) {
       setAuthTimedOut(false);
+      hasRedirectedRef.current = false;
       return;
     }
 
     const timeoutId = window.setTimeout(() => {
+      if (hasRedirectedRef.current) return;
+      hasRedirectedRef.current = true;
       setAuthTimedOut(true);
       router.navigate({ to: '/login', search: { redirect: redirectTarget } });
     }, 2500);
 
     return () => window.clearTimeout(timeoutId);
-  }, [loading, redirectTarget, router]);
+  }, [loading, location.pathname, redirectTarget, router]);
 
   useEffect(() => {
-    if (!loading && !session) {
+    if (!location.pathname.startsWith('/dashboard')) return;
+    if (!loading && !session && !hasRedirectedRef.current) {
+      hasRedirectedRef.current = true;
       router.navigate({ to: '/login', search: { redirect: redirectTarget } });
     }
-  }, [loading, redirectTarget, router, session]);
+  }, [loading, location.pathname, redirectTarget, router, session]);
 
   useEffect(() => {
     setMobileOpen(false);
-  }, [router.state.location.pathname]);
+  }, [location.pathname]);
 
   if (loading) {
     return (
